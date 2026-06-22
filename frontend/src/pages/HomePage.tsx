@@ -1,79 +1,165 @@
 import { useState } from "react";
-import { SearchBar } from "@/components/user/SearchBar";
-import { FaqAccordion } from "@/components/user/FaqAccordion";
-import { CategoryNav } from "@/components/user/CategoryNav";
+import { Mic } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useFaqStore } from "@/store/useFaqStore";
+import Logo from "@/assets/logo.png";
 
 export default function HomePage() {
+  const { faqs, popularQueries } = useFaqStore();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    null,
+  const [isListening, setIsListening] = useState(false); // Состояние прослушивания
+
+  const queriesArray = popularQueries
+    ? popularQueries.split(",").map((q) => q.trim())
+    : [];
+
+  const filteredFaqs = faqs.filter((faq) =>
+    faq.question.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  // Получаем данные из стора
-  const { faqs } = useFaqStore();
+  // ФУНКЦИЯ ГОЛОСОВОГО ВВОДА
+  const handleVoiceInput = () => {
+    // Проверка поддержки браузером
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
 
-  // Логика фильтрации (простая версия, пока нет ML-поиска)
-  const filteredFaqs = faqs.filter((faq) => {
-    const matchesSearch =
-      faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      faq.answer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      faq.synonyms.some((s) =>
-        s.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
+    if (!SpeechRecognition) {
+      alert("Ваш браузер не поддерживает голосовой ввод. Попробуйте Chrome.");
+      return;
+    }
 
-    const matchesCategory = selectedCategoryId
-      ? faq.categoryId === selectedCategoryId
-      : true;
+    const recognition = new SpeechRecognition();
+    recognition.lang = "ru-RU";
+    recognition.interimResults = false;
 
-    return matchesSearch && matchesCategory;
-  });
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setSearchQuery(transcript);
+      setIsListening(false);
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* 1. Hero Section - Заголовок и поиск */}
-      <section className="bg-white border-b py-16 px-4">
-        <div className="max-w-4xl mx-auto text-center space-y-6">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight">
-            Чем мы можем вам помочь?
-          </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Найдите ответы на свои вопросы с помощью текста или просто скажите
-            их голосом.
-          </p>
-
-          <div className="pt-4">
-            {/* Передаем функцию изменения запроса в SearchBar */}
-            <SearchBar value={searchQuery} onChange={setSearchQuery} />
-          </div>
-        </div>
-      </section>
-
-      {/* 2. Основной контент */}
-      <main className="max-w-4xl mx-auto py-12 px-4 space-y-10">
-        {/* Навигация по категориям */}
-        <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">
-            Поиск по категориям
-          </h2>
-          <CategoryNav
-            activeId={selectedCategoryId}
-            onSelect={setSelectedCategoryId}
+    <div className="min-h-screen bg-[#F0F2F5] font-sans pb-40 relative overflow-x-hidden">
+      {/* 1. ХЕДЕР */}
+      <header className="pt-[49px] pl-[49px] flex items-center gap-[28px]">
+        <div className="w-[103px] h-[103px] bg-white rounded-full shadow-sm flex items-center justify-center border border-[#EBF2FF] overflow-hidden flex-shrink-0">
+          <img
+            src={Logo}
+            alt="Logo"
+            className="w-full h-full object-contain p-2"
           />
         </div>
+        <div className="flex flex-col justify-center">
+          <h1 className="text-[40px] leading-[1.1] font-semibold text-[#1A2B4B]">
+            SynFAQ Moodboard
+          </h1>
+          <p className="text-[#2051FF] text-[20px] font-medium mt-0">
+            Understanding meaning, not just words
+          </p>
+        </div>
+      </header>
 
-        {/* Список FAQ */}
-        <div className="space-y-6">
-          <div className="flex justify-between items-end">
-            <h2 className="text-2xl font-bold text-slate-900">
-              {searchQuery ? "Результаты поиска" : "Популярные вопросы"}
-            </h2>
-            <span className="text-sm text-slate-500">
-              Найдено: {filteredFaqs.length}
-            </span>
+      {/* 2. ЦЕНТРАЛЬНЫЙ КОНТЕНТ */}
+      <main className="flex flex-col items-center w-full pt-[80px]">
+        <h2 className="text-[44px] font-medium text-[#0D1B4C] text-center mb-[40px]">
+          Найдите ответ на свой вопрос
+        </h2>
+
+        {/* БЛОК ПОИСКА С МИКРОФОНОМ */}
+        <div className="relative w-[840px]">
+          <Input
+            className="w-full h-[84px] bg-white border-[#D8DCE8] border-[1px] rounded-[22px] pl-10 pr-24 !text-[24px] text-[#0D1B4C] placeholder:text-[22px] placeholder:text-[#B0BCCB] shadow-sm outline-none focus-visible:ring-0 focus-visible:border-[#D8DCE8]"
+            placeholder="Задайте свой вопрос ..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+
+          <button
+            type="button"
+            onClick={handleVoiceInput} // ПРИВЯЗАЛИ ФУНКЦИЮ
+            className={`absolute right-[10px] top-1/2 -translate-y-1/2 w-[64px] h-[64px] rounded-full flex items-center justify-center p-0 shadow-md transition-all active:scale-95 border-none outline-none ${
+              isListening
+                ? "bg-red-500 animate-pulse"
+                : "bg-[#2051FF] hover:bg-blue-700"
+            }`}
+          >
+            <Mic className="!w-[27px] !h-[27px] text-white" strokeWidth={2.5} />
+          </button>
+        </div>
+
+        {/* ПОПУЛЯРНЫЕ ЗАПРОСЫ */}
+        <div className="w-[840px] mt-8 text-left">
+          <p className="text-[18px] text-[#4A5568] mb-4 font-medium">
+            Популярные запросы
+          </p>
+          <div className="flex gap-4">
+            {queriesArray.map((query, index) => (
+              <button
+                key={index}
+                onClick={() => setSearchQuery(query)}
+                className="px-8 py-2 bg-white border border-[#D8DCE8] rounded-[12px] text-[#4A5568] hover:bg-blue-50 transition-colors text-[16px] shadow-sm"
+              >
+                {query}
+              </button>
+            ))}
           </div>
+        </div>
 
-          <FaqAccordion items={filteredFaqs} />
+        {/* СПИСОК FAQ */}
+        <div className="mt-16 w-[840px]">
+          <h3 className="text-[28px] font-semibold text-[#0D1B4C] mb-8 text-left">
+            FAQ
+          </h3>
+          <Accordion
+            type="single"
+            collapsible
+            className="space-y-[20px] w-full"
+          >
+            {filteredFaqs.length > 0 ? (
+              filteredFaqs.map((faq) => (
+                <AccordionItem
+                  key={faq.id}
+                  value={`item-${faq.id}`}
+                  className="border-none"
+                >
+                  <AccordionTrigger className="bg-white px-8 h-[84px] rounded-[24px] border-[#D8DCE8] border-[1px] hover:no-underline shadow-sm transition-all flex justify-between items-center group">
+                    <span className="text-[22px] text-[#0D1B4C] font-normal text-left">
+                      {faq.question}
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="bg-white mt-2 px-8 py-6 rounded-[24px] border-[#D8DCE8] border-[1px] text-[20px] text-slate-500 shadow-md">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))
+            ) : (
+              <p className="text-center text-slate-400 text-lg py-10">
+                Ничего не найдено по вашему запросу
+              </p>
+            )}
+          </Accordion>
         </div>
       </main>
     </div>
