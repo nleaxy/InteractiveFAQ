@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Mic } from "lucide-react";
+import { Link } from "react-router-dom"; // Добавили импорт для навигации
 import { Input } from "@/components/ui/input";
 import {
   Accordion,
@@ -13,7 +14,7 @@ import Logo from "@/assets/logo.png";
 export default function HomePage() {
   const { faqs, popularQueries } = useFaqStore();
   const [searchQuery, setSearchQuery] = useState("");
-  const [isListening, setIsListening] = useState(false); // Состояние прослушивания
+  const [isListening, setIsListening] = useState(false);
 
   const queriesArray = popularQueries
     ? popularQueries.split(",").map((q) => q.trim())
@@ -25,7 +26,6 @@ export default function HomePage() {
 
   // ФУНКЦИЯ ГОЛОСОВОГО ВВОДА
   const handleVoiceInput = () => {
-    // Проверка поддержки браузером
     const SpeechRecognition =
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
@@ -64,13 +64,17 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#F0F2F5] font-sans pb-40 relative overflow-x-hidden">
       {/* 1. ХЕДЕР */}
       <header className="pt-[49px] pl-[49px] flex items-center gap-[28px]">
-        <div className="w-[103px] h-[103px] bg-white rounded-full shadow-sm flex items-center justify-center border border-[#EBF2FF] overflow-hidden flex-shrink-0">
-          <img
-            src={Logo}
-            alt="Logo"
-            className="w-full h-full object-contain p-2"
-          />
-        </div>
+        {/* КЛИКАБЕЛЬНЫЙ ЛОГОТИП */}
+        <Link to="/" className="transition-transform active:scale-95">
+          <div className="w-[103px] h-[103px] bg-white rounded-full shadow-sm flex items-center justify-center border border-[#EBF2FF] overflow-hidden flex-shrink-0 cursor-pointer">
+            <img
+              src={Logo}
+              alt="Logo"
+              className="w-full h-full object-contain p-2"
+            />
+          </div>
+        </Link>
+
         <div className="flex flex-col justify-center">
           <h1 className="text-[40px] leading-[1.1] font-semibold text-[#1A2B4B]">
             SynFAQ Moodboard
@@ -98,7 +102,7 @@ export default function HomePage() {
 
           <button
             type="button"
-            onClick={handleVoiceInput} // ПРИВЯЗАЛИ ФУНКЦИЮ
+            onClick={handleVoiceInput}
             className={`absolute right-[10px] top-1/2 -translate-y-1/2 w-[64px] h-[64px] rounded-full flex items-center justify-center p-0 shadow-md transition-all active:scale-95 border-none outline-none ${
               isListening
                 ? "bg-red-500 animate-pulse"

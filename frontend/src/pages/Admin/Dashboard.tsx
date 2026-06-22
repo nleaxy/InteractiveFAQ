@@ -2,6 +2,7 @@ import { Search, Plus, Pencil, Trash2, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Link } from "react-router-dom"; // 1. Добавили импорт Link
 import {
   Accordion,
   AccordionContent,
@@ -25,13 +26,17 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#F0F2F5] font-sans pb-20 relative overflow-x-hidden">
       {/* 1. ХЕДЕР */}
       <header className="absolute top-[49px] left-[49px] flex items-center gap-[28px]">
-        <div className="w-[103px] h-[103px] bg-white rounded-full shadow-md flex items-center justify-center border border-[#EBF2FF] overflow-hidden flex-shrink-0">
-          <img
-            src={Logo}
-            alt="Logo"
-            className="w-full h-full object-contain p-2"
-          />
-        </div>
+        {/* ЛОГОТИП С СЫЛКОЙ НА ГЛАВНУЮ */}
+        <Link to="/" className="transition-transform active:scale-95">
+          <div className="w-[103px] h-[103px] bg-white rounded-full shadow-md flex items-center justify-center border border-[#EBF2FF] overflow-hidden flex-shrink-0 cursor-pointer">
+            <img
+              src={Logo}
+              alt="Logo"
+              className="w-full h-full object-contain p-2"
+            />
+          </div>
+        </Link>
+
         <div className="flex flex-col justify-center">
           <h1 className="text-[40px] leading-[1.1] font-semibold text-[#1A2B4B]">
             SynFAQ Moodboard
@@ -75,11 +80,9 @@ export default function Dashboard() {
               Популярные запросы (через запятую)
             </label>
             <Input
-              // 1. Привязываем значение к стору
               value={popularQueries}
-              // 2. При каждом изменении вызываем функцию из стора
               onChange={(e) => setPopularQueries(e.target.value)}
-              className="w-full h-[56px] bg-[#F9FBFF] border-[#D8DCE8] border-[1px] rounded-[14px] px-6 text-[18px] text-[#4A5568]"
+              className="w-full h-[56px] bg-[#F9FBFF] border-[#D8DCE8] border-[1px] rounded-[14px] px-6 text-[18px] text-[#4A5568] outline-none focus-visible:ring-0 focus-visible:border-[#2051FF]"
               placeholder="cats, roblox, 67"
             />
           </div>
