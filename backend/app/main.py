@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import faqs, search
+from app.api.generate import router as generate_router
 
 app = FastAPI(
     title="Interactive FAQ API",
@@ -23,6 +24,7 @@ app.add_middleware(
 
 app.include_router(faqs.router, prefix="/api/v1", tags=["FAQs"])
 app.include_router(search.router, prefix="/api/v1", tags=["Search"])
+app.include_router(generate_router)
 
 @app.get("/")
 def read_root():
