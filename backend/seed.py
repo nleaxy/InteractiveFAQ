@@ -2,6 +2,7 @@ from app.database.connection import engine, Base, SessionLocal
 from app.models.user import User
 from app.models.faq_project import FAQProject
 from app.models.faq_item import FAQItem
+from app.core.security import hash_password
 
 ANALYST_DATA = {
   "businesses": [
@@ -165,20 +166,23 @@ ANALYST_DATA = {
 }
 
 def init_and_seed_db():
-    print("Инициализация полной базы данных PostgreSQL...")
+    print("Инициализация базы данных PostgreSQL по обновленным схемам...")
+    
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     
     db = SessionLocal()
     try:
-        print("Создание администратора...")
+        print("Создание администратора Александра...")
         test_user = User(
             id=1,
-            login="admin",
-            password_hash="hashed_test_password_123"
+            name="Александр",
+            email="admin@example.com",
+            password_hash=hash_password("admin123")
         )
         db.add(test_user)
         db.commit()
+        print("Администратор создан.")
 
         print("Наполнение базы проектами и статьями...")
         for b_data in ANALYST_DATA["businesses"]:
@@ -205,7 +209,7 @@ def init_and_seed_db():
                     db.add(faq_item)
 
         db.commit()
-        print("База данных PostgreSQL полностью наполнена всеми данными от аналитика!")
+        print("База данных PostgreSQL успешно пересоздана и наполнена!")
         
     except Exception as e:
         print(f"Ошибка при работе с СУБД: {e}")

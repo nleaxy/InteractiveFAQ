@@ -1,8 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import faqs, search
-from app.api.generate import router as generate_router
+from app.api import auth, projects, search, generate
 from app.ml.search_model import FAQSynonymizer
 
 @asynccontextmanager
@@ -33,9 +32,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(faqs.router, prefix="/api/v1", tags=["FAQs"])
-app.include_router(search.router, prefix="/api/v1", tags=["Search"])
-app.include_router(generate_router)
+app.include_router(auth.router, prefix="/api/v1", tags=["Авторизация"])
+app.include_router(projects.router, prefix="/api/projects", tags=["Проекты & FAQ CRUD"])
+app.include_router(search.router, prefix="/api/projects", tags=["Умный поиск"])
+app.include_router(generate.router, prefix="/api/projects", tags=["Генерация FAQ"])
 
 @app.get("/")
 def read_root():
