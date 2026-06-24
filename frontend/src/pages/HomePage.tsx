@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Mic } from "lucide-react";
-import { Link } from "react-router-dom"; // Добавили импорт для навигации
+import { Link, useParams } from "react-router-dom"; // Добавили useParams
 import { Input } from "@/components/ui/input";
 import {
   Accordion,
@@ -12,19 +12,36 @@ import { useFaqStore } from "@/store/useFaqStore";
 import Logo from "@/assets/logo.png";
 
 export default function HomePage() {
-  const { faqs, popularQueries } = useFaqStore();
+  // 1. Получаем ID проекта из URL (например, из /view/uni -> достанет "uni")
+  const { projectId } = useParams();
+
+  // 2. Достаем конкретный проект из стора
+  const project = useFaqStore((state) =>
+    state.projects.find((p) => p.id === projectId),
+  );
+
   const [searchQuery, setSearchQuery] = useState("");
   const [isListening, setIsListening] = useState(false);
 
-  const queriesArray = popularQueries
-    ? popularQueries.split(",").map((q) => q.trim())
+  // Если проект не найден, показываем заглушку (чтобы сайт не падал)
+  if (!project) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F0F2F5]">
+        <h1 className="text-2xl font-bold text-slate-400">Проект не найден</h1>
+      </div>
+    );
+  }
+
+  // 3. Используем данные именно найденного проекта
+  const queriesArray = project.popularQueries
+    ? project.popularQueries.split(",").map((q) => q.trim())
     : [];
 
-  const filteredFaqs = faqs.filter((faq) =>
+  const filteredFaqs = project.faqs.filter((faq) =>
     faq.question.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  // ФУНКЦИЯ ГОЛОСОВОГО ВВОДА
+  // ФУНКЦИЯ ГОЛОСОВОГО ВВОДА (без изменений)
   const handleVoiceInput = () => {
     const SpeechRecognition =
       (window as any).SpeechRecognition ||
@@ -39,24 +56,14 @@ export default function HomePage() {
     recognition.lang = "ru-RU";
     recognition.interimResults = false;
 
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
-
+    recognition.onstart = () => setIsListening(true);
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       setSearchQuery(transcript);
       setIsListening(false);
     };
-
-    recognition.onerror = () => {
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
     recognition.start();
   };
 
@@ -64,7 +71,6 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#F0F2F5] font-sans pb-40 relative overflow-x-hidden">
       {/* 1. ХЕДЕР */}
       <header className="pt-[49px] pl-[49px] flex items-center gap-[28px]">
-        {/* КЛИКАБЕЛЬНЫЙ ЛОГОТИП */}
         <Link to="/" className="transition-transform active:scale-95">
           <div className="w-[103px] h-[103px] bg-white rounded-full shadow-sm flex items-center justify-center border border-[#EBF2FF] overflow-hidden flex-shrink-0 cursor-pointer">
             <img
@@ -76,8 +82,9 @@ export default function HomePage() {
         </Link>
 
         <div className="flex flex-col justify-center">
+          {/* Динамическое название проекта */}
           <h1 className="text-[40px] leading-[1.1] font-semibold text-[#1A2B4B]">
-            SynFAQ Moodboard
+            SynFAQ {project.title}
           </h1>
           <p className="text-[#2051FF] text-[20px] font-medium mt-0">
             Understanding meaning, not just words
@@ -91,7 +98,6 @@ export default function HomePage() {
           Найдите ответ на свой вопрос
         </h2>
 
-        {/* БЛОК ПОИСКА С МИКРОФОНОМ */}
         <div className="relative w-[840px]">
           <Input
             className="w-full h-[84px] bg-white border-[#D8DCE8] border-[1px] rounded-[22px] pl-10 pr-24 !text-[24px] text-[#0D1B4C] placeholder:text-[22px] placeholder:text-[#B0BCCB] shadow-sm outline-none focus-visible:ring-0 focus-visible:border-[#D8DCE8]"
@@ -113,7 +119,6 @@ export default function HomePage() {
           </button>
         </div>
 
-        {/* ПОПУЛЯРНЫЕ ЗАПРОСЫ */}
         <div className="w-[840px] mt-8 text-left">
           <p className="text-[18px] text-[#4A5568] mb-4 font-medium">
             Популярные запросы
@@ -131,7 +136,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* СПИСОК FAQ */}
         <div className="mt-16 w-[840px]">
           <h3 className="text-[28px] font-semibold text-[#0D1B4C] mb-8 text-left">
             FAQ
@@ -160,7 +164,7 @@ export default function HomePage() {
               ))
             ) : (
               <p className="text-center text-slate-400 text-lg py-10">
-                Ничего не найдено по вашему запросу
+                Ничего не найдено
               </p>
             )}
           </Accordion>

@@ -16,14 +16,13 @@ function App() {
         {/* 2. Страница входа для админов */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* 3. Панель управления (Админка) */}
-        <Route path="/admin" element={<Dashboard />} />
+        {/* Страница для владельца (Админка) */}
+        <Route path="/admin/:projectId" element={<Dashboard />} />
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/generate" element={<GeneratePage />} />
 
-        {/* 4. Страница поиска для клиентов (например, по адресу /search или /view) */}
-        {/* В будущем здесь будет /view/:id */}
-        <Route path="/search" element={<HomePage />} />
+        {/* Страница для клиентов (Поиск) */}
+        <Route path="/faq/:projectId" element={<HomePage />} />
       </Routes>
     </Router>
   );
