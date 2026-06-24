@@ -12,10 +12,10 @@ class UserResponse(BaseModel):
     email: str
 
 class RegisterRequest(BaseModel):
-    name: str     
-    email: str    
-    password: str 
-    
+    name: str
+    email: str
+    password: str
+
 class LoginResponse(BaseModel):
     token: str
     user: UserResponse
