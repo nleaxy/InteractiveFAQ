@@ -1,18 +1,19 @@
-export interface Category {
-  id: string;
-  name: string;
-}
-
 export interface FAQ {
   id: string;
   question: string;
   answer: string;
-  categoryId: string;
-  synonyms: string[]; // Для ML поиска
-  keywords: string[]; // Ключевые слова
+  synonyms?: string[]; // Синонимы для ML
 }
 
-export interface SearchResult {
-  faq: FAQ;
-  score: number; // Насколько совпал поиск (от ML или бэка)
+export interface Category {
+  id: string;
+  name: string;
+  faqs: FAQ[]; // Вопросы лежат внутри категории
+}
+
+export interface FaqProject {
+  id: string;
+  title: string;
+  popularQueries: string;
+  categories: Category[]; // Проект теперь состоит из категорий
 }

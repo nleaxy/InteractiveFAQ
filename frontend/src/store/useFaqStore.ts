@@ -1,113 +1,143 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { FAQ } from "../types/faq";
-
-// 1. Описываем структуру одного проекта
-export interface FaqProject {
-  id: string; // Это будет slug для URL (например, "uni" или "hr-portal")
-  title: string; // Название проекта
-  faqs: FAQ[]; // Вопросы именно этого проекта
-  popularQueries: string; // Популярные запросы именно этого проекта
-}
+import type { FAQ, Category, FaqProject } from "../types/faq";
 
 interface FaqState {
   projects: FaqProject[];
 
-  // Функции для управления проектами
+  // Управление проектами
   addProject: (project: FaqProject) => void;
   deleteProject: (projectId: string) => void;
 
-  // Функции для управления контентом внутри проекта
-  addFaq: (projectId: string, faq: FAQ) => void;
+  // Управление категориями
+  addCategory: (projectId: string, category: Category) => void;
+  deleteCategory: (projectId: string, categoryId: string) => void;
+
+  // Управление вопросами (теперь требуют categoryId)
+  addFaq: (projectId: string, categoryId: string, faq: FAQ) => void;
   deleteFaq: (projectId: string, faqId: string) => void;
-  // НОВАЯ ФУНКЦИЯ: Редактирование вопроса
   updateFaq: (
     projectId: string,
     faqId: string,
     updatedFaq: Partial<FAQ>,
   ) => void;
-  setPopularQueries: (projectId: string, queries: string) => void;
 
-  // Селектор для получения данных одного проекта
+  setPopularQueries: (projectId: string, queries: string) => void;
   getProjectById: (id: string) => FaqProject | undefined;
 }
 
 export const useFaqStore = create<FaqState>()(
   persist(
     (set, get) => ({
-      // НАЧАЛЬНЫЕ ДАННЫЕ
+      // НАЧАЛЬНЫЕ ДАННЫЕ (Обновленная структура)
       projects: [
         {
           id: "uni",
           title: "Университет",
           popularQueries: "cats, roblox, 67",
-          faqs: [
+          categories: [
             {
-              id: "1",
-              question: "Как восстановить пароль?",
-              answer:
-                'Для восстановления пароля нажмите на кнопку "Забыли пароль" на странице входа и следуйте инструкциям.',
-              categoryId: "uni",
-              synonyms: [],
-              keywords: [],
-            },
-            {
-              id: "2",
-              question: "Как изменить почту?",
-              answer:
-                'Почту можно изменить в настройках профиля в разделе "Безопасность".',
-              categoryId: "uni",
-              synonyms: [],
-              keywords: [],
+              id: "cat-default",
+              name: "Общие вопросы",
+              faqs: [
+                {
+                  id: "1",
+                  question: "Как восстановить пароль?",
+                  answer:
+                    'Для восстановления пароля нажмите на кнопку "Забыли пароль" на странице входа и следуйте инструкциям.',
+                },
+                {
+                  id: "2",
+                  question: "Как изменить почту?",
+                  answer:
+                    'Почту можно изменить в настройках профиля в разделе "Безопасность".',
+                },
+              ],
             },
           ],
         },
       ],
 
-      // Добавить новый проект
       addProject: (project) =>
         set((state) => ({ projects: [...state.projects, project] })),
 
-      // Удалить весь проект
       deleteProject: (projectId) =>
         set((state) => ({
           projects: state.projects.filter((p) => p.id !== projectId),
         })),
 
-      // Добавить вопрос
-      addFaq: (projectId, faq) =>
-        set((state) => ({
-          projects: state.projects.map((p) =>
-            p.id === projectId ? { ...p, faqs: [...p.faqs, faq] } : p,
-          ),
-        })),
-
-      // Удалить вопрос
-      deleteFaq: (projectId, faqId) =>
+      // Добавить категорию в проект
+      addCategory: (projectId, category) =>
         set((state) => ({
           projects: state.projects.map((p) =>
             p.id === projectId
-              ? { ...p, faqs: p.faqs.filter((f) => f.id !== faqId) }
+              ? { ...p, categories: [...(p.categories || []), category] }
               : p,
           ),
         })),
 
-      // РЕАЛИЗАЦИЯ: Редактирование вопроса
-      updateFaq: (projectId, faqId, updatedFaq) =>
+      // Удалить категорию
+      deleteCategory: (projectId, categoryId) =>
         set((state) => ({
           projects: state.projects.map((p) =>
             p.id === projectId
               ? {
                   ...p,
-                  faqs: p.faqs.map((f) =>
-                    f.id === faqId ? { ...f, ...updatedFaq } : f,
+                  categories: p.categories.filter((c) => c.id !== categoryId),
+                }
+              : p,
+          ),
+        })),
+
+      // Добавить вопрос в конкретную категорию проекта
+      addFaq: (projectId, categoryId, faq) =>
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === projectId
+              ? {
+                  ...p,
+                  categories: p.categories.map((c) =>
+                    c.id === categoryId ? { ...c, faqs: [...c.faqs, faq] } : c,
                   ),
                 }
               : p,
           ),
         })),
 
-      // Установить теги
+      // Удалить вопрос (ищет во всех категориях проекта)
+      deleteFaq: (projectId, faqId) =>
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === projectId
+              ? {
+                  ...p,
+                  categories: p.categories.map((c) => ({
+                    ...c,
+                    faqs: c.faqs.filter((f) => f.id !== faqId),
+                  })),
+                }
+              : p,
+          ),
+        })),
+
+      // Редактировать вопрос (ищет во всех категориях проекта)
+      updateFaq: (projectId, faqId, updatedFaq) =>
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === projectId
+              ? {
+                  ...p,
+                  categories: p.categories.map((c) => ({
+                    ...c,
+                    faqs: c.faqs.map((f) =>
+                      f.id === faqId ? { ...f, ...updatedFaq } : f,
+                    ),
+                  })),
+                }
+              : p,
+          ),
+        })),
+
       setPopularQueries: (projectId, queries) =>
         set((state) => ({
           projects: state.projects.map((p) =>
@@ -115,13 +145,8 @@ export const useFaqStore = create<FaqState>()(
           ),
         })),
 
-      // Поиск проекта
-      getProjectById: (id) => {
-        return get().projects.find((p) => p.id === id);
-      },
+      getProjectById: (id) => get().projects.find((p) => p.id === id),
     }),
-    {
-      name: "faq-storage",
-    },
+    { name: "faq-storage" },
   ),
 );

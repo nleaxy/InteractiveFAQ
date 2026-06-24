@@ -3,14 +3,13 @@ import { Upload, Sparkles, ChevronLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Link, useNavigate } from "react-router-dom"; // Добавили useNavigate
-import { useFaqStore } from "@/store/useFaqStore"; // Добавили стор
+import { Link, useNavigate } from "react-router-dom";
+import { useFaqStore } from "@/store/useFaqStore";
 
 export default function GeneratePage() {
   const navigate = useNavigate();
   const addProject = useFaqStore((state) => state.addProject);
 
-  // Состояния для переключателя и общих полей
   const [mode, setMode] = useState<"ai" | "manual">("ai");
   const [projectTitle, setProjectTitle] = useState("");
   const [urlSlug, setUrlSlug] = useState("");
@@ -19,69 +18,68 @@ export default function GeneratePage() {
   const [description, setDescription] = useState("");
   const [count, setCount] = useState("10");
 
-  // Состояния для ручного ввода
+  // НОВОЕ: Состояние для категории в ручном режиме
+  const [manualCategory, setManualCategory] = useState("Общие вопросы");
   const [manualQuestion, setManualQuestion] = useState("");
   const [manualAnswer, setManualAnswer] = useState("");
 
   // ГЛАВНАЯ ФУНКЦИЯ СОЗДАНИЯ ПРОЕКТА
   const handleCreateProject = () => {
-    // 1. Базовая валидация
     if (!projectTitle || !urlSlug) {
       alert("Пожалуйста, заполните название и URL проекта");
       return;
     }
 
-    if (mode === "manual" && (!manualQuestion || !manualAnswer)) {
-      alert("Пожалуйста, введите хотя бы один вопрос и ответ");
+    if (
+      mode === "manual" &&
+      (!manualQuestion || !manualAnswer || !manualCategory)
+    ) {
+      alert("Пожалуйста, заполните категорию, вопрос и ответ");
       return;
     }
 
-    // 2. Формируем список вопросов (в режиме AI пока делаем "заглушку")
-    const initialFaqs =
+    // 1. Формируем массив вопросов
+    const questions =
       mode === "manual"
         ? [
             {
               id: Date.now().toString(),
               question: manualQuestion,
               answer: manualAnswer,
-              categoryId: "general",
-              synonyms: [],
-              keywords: [],
             },
           ]
         : [
-            // Имитация сгенерированных вопросов для демонстрации
             {
               id: "1",
               question: `Вопрос по теме ${projectTitle} #1`,
               answer: "Ответ будет сгенерирован ИИ на основе вашего описания.",
-              categoryId: "ai",
-              synonyms: [],
-              keywords: [],
             },
             {
               id: "2",
               question: `Вопрос по теме ${projectTitle} #2`,
               answer:
                 "ИИ проанализирует ваш файл или текст и создаст точный ответ.",
-              categoryId: "ai",
-              synonyms: [],
-              keywords: [],
             },
           ];
 
-    // 3. Создаем объект проекта
+    // 2. СОЗДАЕМ КАТЕГОРИЮ (Используем введенное имя для ручного режима)
+    const initialCategories = [
+      {
+        id: "cat-" + Date.now(),
+        name: mode === "manual" ? manualCategory : "Сгенерированные вопросы",
+        faqs: questions,
+      },
+    ];
+
+    // 3. СОЗДАЕМ ОБЪЕКТ ПРОЕКТА
     const newProject = {
       id: urlSlug,
       title: projectTitle,
-      faqs: initialFaqs,
-      popularQueries: "cats, roblox, 67", // начальные теги
+      popularQueries: "cats, roblox, 67",
+      categories: initialCategories,
     };
 
-    // 4. Сохраняем в стор
     addProject(newProject);
-
-    // 5. Переходим в админку этого проекта
     navigate(`/admin/${urlSlug}`);
   };
 
@@ -96,7 +94,6 @@ export default function GeneratePage() {
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] font-sans flex flex-col items-center justify-center p-6 pb-20 uppercase-none">
-      {/* КНОПКА НАЗАД */}
       <div className="w-[840px] mb-4">
         <Link
           to="/projects"
@@ -107,28 +104,19 @@ export default function GeneratePage() {
         </Link>
       </div>
 
-      {/* ГЛАВНАЯ КАРТОЧКА */}
       <div className="bg-white w-[840px] rounded-[40px] shadow-sm border border-[#EBF2FF] p-16 relative overflow-hidden">
         {/* ТАБЫ */}
         <div className="flex justify-center mb-10">
           <div className="bg-[#F0F2F5] p-1.5 rounded-full flex w-[360px] shadow-inner">
             <button
               onClick={() => setMode("ai")}
-              className={`flex-1 h-[44px] rounded-full text-[16px] font-semibold transition-all ${
-                mode === "ai"
-                  ? "bg-white text-[#2051FF] shadow-sm"
-                  : "text-[#94A3B8]"
-              }`}
+              className={`flex-1 h-[44px] rounded-full text-[16px] font-semibold transition-all ${mode === "ai" ? "bg-white text-[#2051FF] shadow-sm" : "text-[#94A3B8]"}`}
             >
               Генерация
             </button>
             <button
               onClick={() => setMode("manual")}
-              className={`flex-1 h-[44px] rounded-full text-[16px] font-semibold transition-all ${
-                mode === "manual"
-                  ? "bg-white text-[#2051FF] shadow-sm"
-                  : "text-[#94A3B8]"
-              }`}
+              className={`flex-1 h-[44px] rounded-full text-[16px] font-semibold transition-all ${mode === "manual" ? "bg-white text-[#2051FF] shadow-sm" : "text-[#94A3B8]"}`}
             >
               Ручной
             </button>
@@ -182,7 +170,6 @@ export default function GeneratePage() {
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
-
             <div className="relative flex items-center justify-center">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-[#E2E8F0]"></div>
@@ -191,7 +178,6 @@ export default function GeneratePage() {
                 ИЛИ
               </div>
             </div>
-
             <div className="space-y-4">
               <label className="text-[18px] font-medium text-[#1A2B4B] ml-2 block italic">
                 Загрузите файл с данными
@@ -206,7 +192,6 @@ export default function GeneratePage() {
                 </p>
               </div>
             </div>
-
             <div className="flex items-end justify-between pt-8 border-t border-[#F1F3F5]">
               <div className="space-y-3 w-[260px]">
                 <label className="text-[16px] font-medium text-[#64748B] ml-2 flex justify-between">
@@ -222,7 +207,7 @@ export default function GeneratePage() {
                 />
               </div>
               <Button
-                onClick={handleCreateProject} // ПРИВЯЗАЛИ ФУНКЦИЮ
+                onClick={handleCreateProject}
                 disabled={parseInt(count) < 5 || parseInt(count) > 20}
                 className="h-[72px] px-10 bg-[#2051FF] hover:bg-blue-700 disabled:bg-slate-300 rounded-[20px] text-[20px] font-semibold text-white shadow-lg flex items-center gap-3 transition-all active:scale-95"
               >
@@ -231,30 +216,56 @@ export default function GeneratePage() {
             </div>
           </div>
         ) : (
-          /* КОНТЕНТ: РУЧНОЙ ВВОД */
+          /* КОНТЕНТ: РУЧНОЙ ВВОД (ОБНОВЛЕННЫЙ) */
           <div className="space-y-8 animate-in fade-in duration-300">
-            <h3 className="text-[24px] font-bold text-[#1A2B4B]">Вопрос 1</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[24px] font-bold text-[#1A2B4B]">
+                Наполнение базы
+              </h3>
+            </div>
+
             <div className="space-y-6">
-              <Input
-                placeholder="Введите вопрос"
-                value={manualQuestion}
-                onChange={(e) => setManualQuestion(e.target.value)}
-                className="h-[64px] bg-white border-[#D8DCE8] rounded-[20px] px-8 text-[18px] focus-visible:border-[#2051FF]"
-              />
-              <Textarea
-                placeholder="Введите ответ"
-                value={manualAnswer}
-                onChange={(e) => setManualAnswer(e.target.value)}
-                className="min-h-[140px] bg-white border-[#D8DCE8] rounded-[24px] p-8 text-[18px] focus-visible:border-[#2051FF] resize-none"
-              />
+              {/* Поле для ввода категории */}
+              <div className="space-y-3">
+                <label className="text-[16px] font-semibold text-[#1A2B4B] ml-2">
+                  Название первой категории
+                </label>
+                <Input
+                  placeholder="Например: Оплата или Доставка"
+                  value={manualCategory}
+                  onChange={(e) => setManualCategory(e.target.value)}
+                  className="h-[64px] bg-white border-[#D8DCE8] rounded-[20px] px-8 text-[18px] focus-visible:ring-0 focus-visible:border-[#2051FF]"
+                />
+              </div>
+
+              {/* Поля для вопроса и ответа */}
+              <div className="space-y-3 pt-4 border-t border-dashed border-[#E2E8F0]">
+                <label className="text-[16px] font-semibold text-[#1A2B4B] ml-2">
+                  Первый вопрос
+                </label>
+                <Input
+                  placeholder="Введите вопрос"
+                  value={manualQuestion}
+                  onChange={(e) => setManualQuestion(e.target.value)}
+                  className="h-[64px] bg-white border-[#D8DCE8] rounded-[20px] px-8 text-[18px] focus-visible:ring-0 focus-visible:border-[#2051FF]"
+                />
+              </div>
+              <div className="space-y-3">
+                <Textarea
+                  placeholder="Введите ответ"
+                  value={manualAnswer}
+                  onChange={(e) => setManualAnswer(e.target.value)}
+                  className="min-h-[140px] bg-white border-[#D8DCE8] rounded-[24px] p-8 text-[18px] focus-visible:ring-0 focus-visible:border-[#2051FF] resize-none"
+                />
+              </div>
             </div>
 
             <div className="flex justify-center pt-6">
               <Button
-                onClick={handleCreateProject} // ПРИВЯЗАЛИ ФУНКЦИЮ
+                onClick={handleCreateProject}
                 className="h-[64px] px-10 bg-[#2051FF] hover:bg-blue-700 rounded-[20px] text-[18px] font-medium text-white shadow-lg flex items-center gap-3 transition-all active:scale-95"
               >
-                <Plus className="w-6 h-6" /> Добавить в базу
+                <Plus className="w-6 h-6" /> Создать проект
               </Button>
             </div>
           </div>
