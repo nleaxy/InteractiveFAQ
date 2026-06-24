@@ -1,86 +1,58 @@
 import { useState } from "react";
-import { Upload, Sparkles, ChevronLeft, Plus } from "lucide-react";
+import { Upload, Sparkles, ChevronLeft, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Link, useNavigate } from "react-router-dom";
 import { useFaqStore } from "@/store/useFaqStore";
+import api from "@/api/axios";
 
 export default function GeneratePage() {
   const navigate = useNavigate();
-  const addProject = useFaqStore((state) => state.addProject);
+  const { generateFaq } = useFaqStore();
 
   const [mode, setMode] = useState<"ai" | "manual">("ai");
   const [projectTitle, setProjectTitle] = useState("");
   const [urlSlug, setUrlSlug] = useState("");
 
-  // Состояния для ИИ генерации
+  // Состояния для ИИ
   const [description, setDescription] = useState("");
   const [count, setCount] = useState("10");
 
-  // НОВОЕ: Состояние для категории в ручном режиме
-  const [manualCategory, setManualCategory] = useState("Общие вопросы");
-  const [manualQuestion, setManualQuestion] = useState("");
-  const [manualAnswer, setManualAnswer] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ГЛАВНАЯ ФУНКЦИЯ СОЗДАНИЯ ПРОЕКТА
-  const handleCreateProject = () => {
-    if (!projectTitle || !urlSlug) {
-      alert("Пожалуйста, заполните название и URL проекта");
-      return;
+  // ГЛАВНАЯ ФУНКЦИЯ
+  const handleCreateProject = async () => {
+    if (!projectTitle || !urlSlug) return alert("Заполните название и URL");
+
+    setIsSubmitting(true);
+    try {
+      // 1. ВСЕГДА СОЗДАЕМ ПРОЕКТ ПЕРВЫМ ДЕЛОМ
+      const projectRes = await api.post("/api/projects", {
+        title: projectTitle,
+        slug: urlSlug,
+      });
+      const newProjectId = projectRes.data.id;
+
+      // 2. ЕСЛИ ЭТО ИИ - ЗАПУСКАЕМ ГЕНЕРАЦИЮ (И ждем её)
+      if (mode === "ai") {
+        if (!description) {
+          alert("Введите описание для ИИ");
+          setIsSubmitting(false);
+          return;
+        }
+        await generateFaq(newProjectId, description, parseInt(count));
+      }
+
+      // 3. ЕСЛИ РУЧНОЙ - МГНОВЕННО ПЕРЕХОДИМ (Никаких лишних ожиданий)
+      // Если ИИ - тоже переходим после завершения генерации
+      navigate(`/admin/${newProjectId}`);
+    } catch (error: any) {
+      console.error(error);
+      alert(error.response?.data?.detail || "Ошибка при создании проекта");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (
-      mode === "manual" &&
-      (!manualQuestion || !manualAnswer || !manualCategory)
-    ) {
-      alert("Пожалуйста, заполните категорию, вопрос и ответ");
-      return;
-    }
-
-    // 1. Формируем массив вопросов
-    const questions =
-      mode === "manual"
-        ? [
-            {
-              id: Date.now().toString(),
-              question: manualQuestion,
-              answer: manualAnswer,
-            },
-          ]
-        : [
-            {
-              id: "1",
-              question: `Вопрос по теме ${projectTitle} #1`,
-              answer: "Ответ будет сгенерирован ИИ на основе вашего описания.",
-            },
-            {
-              id: "2",
-              question: `Вопрос по теме ${projectTitle} #2`,
-              answer:
-                "ИИ проанализирует ваш файл или текст и создаст точный ответ.",
-            },
-          ];
-
-    // 2. СОЗДАЕМ КАТЕГОРИЮ (Используем введенное имя для ручного режима)
-    const initialCategories = [
-      {
-        id: "cat-" + Date.now(),
-        name: mode === "manual" ? manualCategory : "Сгенерированные вопросы",
-        faqs: questions,
-      },
-    ];
-
-    // 3. СОЗДАЕМ ОБЪЕКТ ПРОЕКТА
-    const newProject = {
-      id: urlSlug,
-      title: projectTitle,
-      popularQueries: "cats, roblox, 67",
-      categories: initialCategories,
-    };
-
-    addProject(newProject);
-    navigate(`/admin/${urlSlug}`);
   };
 
   const handleCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,7 +117,7 @@ export default function GeneratePage() {
                 faq/
               </span>
               <Input
-                placeholder="введите url"
+                placeholder="vvedite-url"
                 value={urlSlug}
                 onChange={(e) =>
                   setUrlSlug(e.target.value.toLowerCase().replace(/\s+/g, "-"))
@@ -156,8 +128,8 @@ export default function GeneratePage() {
           </div>
         </div>
 
-        {/* КОНТЕНТ: ГЕНЕРАЦИЯ */}
         {mode === "ai" ? (
+          /* РЕЖИМ ГЕНЕРАЦИИ */
           <div className="space-y-10 animate-in fade-in duration-300">
             <div className="space-y-4">
               <label className="text-[18px] font-medium text-[#1A2B4B] ml-2 block italic">
@@ -195,7 +167,7 @@ export default function GeneratePage() {
             <div className="flex items-end justify-between pt-8 border-t border-[#F1F3F5]">
               <div className="space-y-3 w-[260px]">
                 <label className="text-[16px] font-medium text-[#64748B] ml-2 flex justify-between">
-                  Вопросов <span>(от 5 до 20)</span>
+                  Вопросов <span>(5-20)</span>
                 </label>
                 <Input
                   type="number"
@@ -208,64 +180,48 @@ export default function GeneratePage() {
               </div>
               <Button
                 onClick={handleCreateProject}
-                disabled={parseInt(count) < 5 || parseInt(count) > 20}
-                className="h-[72px] px-10 bg-[#2051FF] hover:bg-blue-700 disabled:bg-slate-300 rounded-[20px] text-[20px] font-semibold text-white shadow-lg flex items-center gap-3 transition-all active:scale-95"
+                disabled={
+                  isSubmitting || parseInt(count) < 5 || parseInt(count) > 20
+                }
+                className="h-[72px] px-10 bg-[#2051FF] hover:bg-blue-700 rounded-[20px] text-[20px] font-semibold text-white shadow-lg flex items-center gap-3 transition-all active:scale-95"
               >
-                <Sparkles className="w-6 h-6" /> Сгенерировать
+                {isSubmitting ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Sparkles className="w-6 h-6" />
+                )}
+                <span>Сгенерировать</span>
               </Button>
             </div>
           </div>
         ) : (
-          /* КОНТЕНТ: РУЧНОЙ ВВОД (ОБНОВЛЕННЫЙ) */
-          <div className="space-y-8 animate-in fade-in duration-300">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[24px] font-bold text-[#1A2B4B]">
-                Наполнение базы
+          /* РУЧНОЙ РЕЖИМ (Теперь максимально простой) */
+          <div className="space-y-12 animate-in fade-in duration-300 py-10">
+            <div className="text-center space-y-4">
+              <div className="w-20 h-20 bg-blue-50 text-[#2051FF] rounded-full flex items-center justify-center mx-auto">
+                <Plus size={40} />
+              </div>
+              <h3 className="text-[28px] font-bold text-[#1A2B4B]">
+                Создать пустой проект
               </h3>
-            </div>
-
-            <div className="space-y-6">
-              {/* Поле для ввода категории */}
-              <div className="space-y-3">
-                <label className="text-[16px] font-semibold text-[#1A2B4B] ml-2">
-                  Название первой категории
-                </label>
-                <Input
-                  placeholder="Например: Оплата или Доставка"
-                  value={manualCategory}
-                  onChange={(e) => setManualCategory(e.target.value)}
-                  className="h-[64px] bg-white border-[#D8DCE8] rounded-[20px] px-8 text-[18px] focus-visible:ring-0 focus-visible:border-[#2051FF]"
-                />
-              </div>
-
-              {/* Поля для вопроса и ответа */}
-              <div className="space-y-3 pt-4 border-t border-dashed border-[#E2E8F0]">
-                <label className="text-[16px] font-semibold text-[#1A2B4B] ml-2">
-                  Первый вопрос
-                </label>
-                <Input
-                  placeholder="Введите вопрос"
-                  value={manualQuestion}
-                  onChange={(e) => setManualQuestion(e.target.value)}
-                  className="h-[64px] bg-white border-[#D8DCE8] rounded-[20px] px-8 text-[18px] focus-visible:ring-0 focus-visible:border-[#2051FF]"
-                />
-              </div>
-              <div className="space-y-3">
-                <Textarea
-                  placeholder="Введите ответ"
-                  value={manualAnswer}
-                  onChange={(e) => setManualAnswer(e.target.value)}
-                  className="min-h-[140px] bg-white border-[#D8DCE8] rounded-[24px] p-8 text-[18px] focus-visible:ring-0 focus-visible:border-[#2051FF] resize-none"
-                />
-              </div>
+              <p className="text-[#64748B] text-[18px] max-w-[400px] mx-auto">
+                Вы сможете добавить категории и вопросы вручную в панели
+                управления проектом.
+              </p>
             </div>
 
             <div className="flex justify-center pt-6">
               <Button
                 onClick={handleCreateProject}
-                className="h-[64px] px-10 bg-[#2051FF] hover:bg-blue-700 rounded-[20px] text-[18px] font-medium text-white shadow-lg flex items-center gap-3 transition-all active:scale-95"
+                disabled={isSubmitting}
+                className="h-[72px] px-12 bg-[#2051FF] hover:bg-blue-700 rounded-[20px] text-[20px] font-semibold text-white shadow-lg flex items-center gap-3 transition-all active:scale-95"
               >
-                <Plus className="w-6 h-6" /> Создать проект
+                {isSubmitting ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Plus className="w-6 h-6" />
+                )}
+                <span>Создать и перейти</span>
               </Button>
             </div>
           </div>
