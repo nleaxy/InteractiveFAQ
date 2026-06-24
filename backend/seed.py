@@ -175,7 +175,6 @@ def init_and_seed_db():
     try:
         print("Создание администратора Александра...")
         test_user = User(
-            id=1,
             name="Александр",
             email="admin@example.com",
             password_hash=hash_password("admin123")
@@ -187,7 +186,6 @@ def init_and_seed_db():
         print("Наполнение базы проектами и статьями...")
         for b_data in ANALYST_DATA["businesses"]:
             project = FAQProject(
-                id=b_data["id"],
                 name=b_data["name"],
                 slug=b_data["slug"],
                 owner_id=test_user.id
