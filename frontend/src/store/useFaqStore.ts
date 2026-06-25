@@ -6,6 +6,7 @@ interface FaqState {
   projects: FaqProject[];
   currentProjectFaqs: FAQ[]; // Добавили отдельный массив для вопросов текущего проекта
   isLoading: boolean;
+  logout: () => void;
 
   fetchProjects: () => Promise<void>;
   fetchProjectFaqs: (projectId: string | number) => Promise<void>; // Загрузка вопросов конкретного проекта
@@ -180,4 +181,9 @@ export const useFaqStore = create<FaqState>((set, get) => ({
 
   getProjectById: (id) =>
     get().projects.find((p) => String(p.id) === String(id)),
+  logout: () => {
+    set({ projects: [], currentProjectFaqs: [] }); // Очищаем списки
+    localStorage.removeItem("token");
+    localStorage.removeItem("user_name");
+  },
 }));

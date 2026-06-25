@@ -1,23 +1,26 @@
-import { MessageSquare, BookOpen, LogOut } from "lucide-react"; // Добавили иконку выхода
+import { MessageSquare, BookOpen, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link, useNavigate } from "react-router-dom"; // Добавили useNavigate
+import { Link, useNavigate } from "react-router-dom";
 import Logo from "@/assets/logo.png";
+import { useFaqStore } from "@/store/useFaqStore";
 
 export default function LandingPage() {
   const navigate = useNavigate();
+
+  const logout = useFaqStore((state) => state.logout);
+
   const isLoggedIn = !!localStorage.getItem("token");
 
-  // Функция выхода
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user_name");
-    // Перезагружаем страницу, чтобы состояние isLoggedIn обновилось
+    logout();
+
+    navigate("/");
+
     window.location.reload();
   };
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] font-sans overflow-x-hidden">
-      {/* 1. НАВИГАЦИЯ (Хедер) */}
       <header className="fixed top-0 w-full h-[100px] px-[49px] flex items-center justify-between z-50 bg-[#F0F2F5]/80 backdrop-blur-sm">
         <div className="flex items-center gap-[40px]">
           <div className="flex items-center gap-[20px]">
@@ -47,7 +50,6 @@ export default function LandingPage() {
           </nav>
         </div>
 
-        {/* ЛОГИКА КНОПОК В ХЕДЕРЕ */}
         <div className="flex items-center gap-4">
           {isLoggedIn ? (
             <>
@@ -75,7 +77,6 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* 2. ГЛАВНЫЙ БЛОК */}
       <main className="container mx-auto px-[49px] pt-[220px] flex flex-col lg:flex-row items-center justify-between">
         <div className="max-w-[700px] flex flex-col items-start">
           <h1 className="text-[72px] leading-[1.1] font-bold text-[#1A2B4B] mb-8">
@@ -103,7 +104,6 @@ export default function LandingPage() {
           )}
         </div>
 
-        {/* ДЕКОР */}
         <div className="relative mt-20 lg:mt-0 w-full lg:w-auto flex justify-center">
           <div className="relative z-20 w-[140px] h-[140px] bg-[#2051FF] rounded-[32px] shadow-2xl flex items-center justify-center transform -translate-y-12 translate-x-12 animate-bounce-slow">
             <MessageSquare className="w-16 h-16 text-white" strokeWidth={1.5} />
