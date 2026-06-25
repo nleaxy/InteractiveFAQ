@@ -72,6 +72,26 @@ def create_project(
         "createdAt": new_project.created_at.strftime("%d.%m.%Y")
     }
 
+@router.get("/public", response_model=List[ProjectResponse], summary="Получить все проекты базы данных (Публичный каталог)")
+def get_public_projects_catalog(db: Session = Depends(get_db)):
+    """
+    Возвращает список вообще всех проектов в системе для публичного каталога на главной странице.
+    Авторизация (токен) НЕ требуется.
+    """
+    projects = db.query(FAQProject).all()
+    
+    response = []
+    for p in projects:
+        q_count = db.query(FAQItem).filter(FAQItem.project_id == p.id).count()
+        response.append({
+            "id": p.id,
+            "title": p.name,
+            "slug": p.slug,
+            "questionsCount": q_count,
+            "createdAt": p.created_at.strftime("%d.%m.%Y")
+        })
+    return response
+
 @router.delete("/{projectId}", summary="Удалить проект")
 def delete_project(
     projectId: int = Path(...), 
