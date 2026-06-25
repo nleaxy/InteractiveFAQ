@@ -13,13 +13,13 @@ import Logo from "@/assets/logo.png";
 import { cn } from "@/lib/utils";
 
 export default function HomePage() {
-  const { projectId } = useParams();
+  // 1. Берем projectSlug вместо projectId из URL
+  const { projectSlug } = useParams();
 
-  // Достаем всё необходимое из стора
   const {
-    projects,
     currentProjectFaqs,
-    fetchProjects,
+    activeProject,
+    fetchProjectBySlug,
     fetchProjectFaqs,
     isLoading,
   } = useFaqStore();
@@ -28,24 +28,26 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
 
-  // 1. Загружаем данные проекта и вопросы при входе
+  // 2. Новая логика загрузки данных
   useEffect(() => {
-    if (projectId) {
-      fetchProjects(); // Чтобы получить название проекта
-      fetchProjectFaqs(Number(projectId)); // Получаем вопросы по ID (числу)
-    }
-  }, [projectId]);
+    const loadData = async () => {
+      if (projectSlug) {
+        // Сначала получаем данные проекта по слагу
+        const project = await fetchProjectBySlug(projectSlug);
+        // Если проект найден, загружаем его вопросы по числовому ID
+        if (project) {
+          fetchProjectFaqs(project.id);
+        }
+      }
+    };
+    loadData();
+  }, [projectSlug]);
 
-  // Находим информацию о самом проекте
-  const project = projects.find((p) => String(p.id) === String(projectId));
-
-  // 2. Вычисляем список уникальных категорий из полученных вопросов
   const categories = useMemo(() => {
     const names = currentProjectFaqs.map((f) => f.category).filter(Boolean);
     return Array.from(new Set(names));
   }, [currentProjectFaqs]);
 
-  // 3. Логика фильтрации (Категория + Поиск)
   const filteredFaqs = currentProjectFaqs.filter((faq) => {
     const matchesCategory = activeCategory
       ? faq.category === activeCategory
@@ -56,7 +58,6 @@ export default function HomePage() {
     return matchesCategory && matchesSearch;
   });
 
-  // Голосовой ввод (без изменений)
   const handleVoiceInput = () => {
     const SpeechRecognition =
       (window as any).SpeechRecognition ||
@@ -77,7 +78,8 @@ export default function HomePage() {
     recognition.start();
   };
 
-  if (isLoading && currentProjectFaqs.length === 0) {
+  // 3. Состояния загрузки и отсутствия проекта
+  if (isLoading && !activeProject) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F0F2F5]">
         <Loader2 className="w-12 h-12 text-[#2051FF] animate-spin" />
@@ -85,7 +87,7 @@ export default function HomePage() {
     );
   }
 
-  if (!project) {
+  if (!activeProject) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F0F2F5]">
         <h1 className="text-2xl font-bold text-slate-400">Проект не найден</h1>
@@ -95,7 +97,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] font-sans pb-40 relative overflow-x-hidden">
-      {/* 1. ХЕДЕР */}
       <header className="pt-[49px] pl-[49px] flex items-center gap-[28px]">
         <Link to="/" className="transition-transform active:scale-95">
           <div className="w-[103px] h-[103px] bg-white rounded-full shadow-sm flex items-center justify-center border border-[#EBF2FF] overflow-hidden flex-shrink-0 cursor-pointer">
@@ -108,7 +109,7 @@ export default function HomePage() {
         </Link>
         <div className="flex flex-col justify-center">
           <h1 className="text-[40px] leading-[1.1] font-semibold text-[#1A2B4B]">
-            SynFAQ {project.title}
+            SynFAQ {activeProject.title}
           </h1>
           <p className="text-[#2051FF] text-[20px] font-medium mt-0">
             Understanding meaning, not just words
@@ -116,13 +117,11 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* 2. ЦЕНТРАЛЬНЫЙ КОНТЕНТ */}
       <main className="flex flex-col items-center w-full pt-[80px]">
         <h2 className="text-[44px] font-medium text-[#0D1B4C] text-center mb-[40px]">
           Найдите ответ на свой вопрос
         </h2>
 
-        {/* БЛОК ПОИСКА */}
         <div className="relative w-[840px]">
           <Input
             className="w-full h-[84px] bg-white border-[#D8DCE8] border-[1px] rounded-[22px] pl-10 pr-24 !text-[24px] text-[#0D1B4C] placeholder:text-[22px] placeholder:text-[#B0BCCB] shadow-sm outline-none"
@@ -143,7 +142,6 @@ export default function HomePage() {
           </button>
         </div>
 
-        {/* КАТЕГОРИИ (Динамические) */}
         {categories.length > 0 && (
           <div className="w-[840px] mt-10">
             <p className="text-[18px] text-[#4A5568] mb-4 font-medium italic">
@@ -179,7 +177,6 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* СПИСОК FAQ */}
         <div className="mt-16 w-[840px]">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-[28px] font-semibold text-[#0D1B4C]">FAQ</h3>
@@ -200,7 +197,7 @@ export default function HomePage() {
                   value={`item-${faq.id}`}
                   className="border-none"
                 >
-                  <AccordionTrigger className="bg-white px-8 h-[84px] rounded-[24px] border-[#D8DCE8] border-[1px] hover:no-underline shadow-sm transition-all flex justify-between items-center group">
+                  <AccordionTrigger className="bg-white px-8 h-[84px] rounded-[24px] border-[#D8DCE8] border-[1px] hover:no-underline shadow-sm flex justify-between items-center group">
                     <span className="text-[22px] text-[#0D1B4C] font-normal text-left">
                       {faq.question}
                     </span>

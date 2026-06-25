@@ -6,24 +6,24 @@ import { useFaqStore } from "@/store/useFaqStore";
 
 export default function LandingPage() {
   const navigate = useNavigate();
-
   const logout = useFaqStore((state) => state.logout);
-
   const isLoggedIn = !!localStorage.getItem("token");
 
   const handleLogout = () => {
     logout();
-
     navigate("/");
-
     window.location.reload();
   };
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] font-sans overflow-x-hidden">
+      {/* 1. НАВИГАЦИЯ */}
       <header className="fixed top-0 w-full h-[100px] px-[49px] flex items-center justify-between z-50 bg-[#F0F2F5]/80 backdrop-blur-sm">
         <div className="flex items-center gap-[40px]">
-          <div className="flex items-center gap-[20px]">
+          <Link
+            to="/"
+            className="flex items-center gap-[20px] transition-opacity hover:opacity-80"
+          >
             <div className="w-[60px] h-[60px] bg-white rounded-full shadow-sm flex items-center justify-center border border-[#EBF2FF] overflow-hidden">
               <img
                 src={Logo}
@@ -32,21 +32,23 @@ export default function LandingPage() {
               />
             </div>
             <span className="text-[28px] font-bold text-[#1A2B4B]">SynFAQ</span>
-          </div>
+          </Link>
 
           <nav className="hidden md:flex gap-[32px] ml-10">
-            <a
-              href="#"
+            {/* ИЗМЕНЕНО: Теперь ведет на страницу документации */}
+            <Link
+              to="/docs"
               className="text-[18px] font-medium text-[#1A2B4B] hover:text-[#2051FF] transition-colors"
             >
               О платформе
-            </a>
-            <a
-              href="#"
+            </Link>
+
+            <Link
+              to="/catalog"
               className="text-[18px] font-medium text-[#1A2B4B] hover:text-[#2051FF] transition-colors"
             >
               FAQ-каталог
-            </a>
+            </Link>
           </nav>
         </div>
 
@@ -77,6 +79,7 @@ export default function LandingPage() {
         </div>
       </header>
 
+      {/* 2. ГЛАВНЫЙ БЛОК */}
       <main className="container mx-auto px-[49px] pt-[220px] flex flex-col lg:flex-row items-center justify-between">
         <div className="max-w-[700px] flex flex-col items-start">
           <h1 className="text-[72px] leading-[1.1] font-bold text-[#1A2B4B] mb-8">

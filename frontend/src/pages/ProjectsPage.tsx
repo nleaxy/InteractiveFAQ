@@ -2,40 +2,38 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LayoutGrid, MessageSquareText, Plus, Loader2 } from "lucide-react";
-import { useFaqStore } from "@/store/useFaqStore"; // Подключили стор
+import { useFaqStore } from "@/store/useFaqStore";
 import Logo from "@/assets/logo.png";
 
 export default function ProjectsPage() {
-  // 1. Достаем данные и функции из стора
   const { projects, fetchProjects, deleteProject, isLoading } = useFaqStore();
 
-  // 2. Загружаем проекты при входе на страницу
   useEffect(() => {
     fetchProjects();
   }, []);
 
-  // 3. Считаем статистику на лету
   const totalProjects = projects.length;
   const totalQuestions = projects.reduce(
     (acc, p) => acc + (p.questionsCount || 0),
     0,
   );
 
-  // 4. Получаем имя пользователя (которое сохранили при логине)
   const userName = localStorage.getItem("user_name") || "Александр";
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] font-sans pb-20">
-      {/* 1. ХЕДЕР */}
       <header className="h-[80px] bg-white border-b border-[#E9ECEF] px-[60px] flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-[44px] h-[44px] bg-white rounded-full shadow-sm flex items-center justify-center border border-[#EBF2FF] overflow-hidden">
-            <img
-              src={Logo}
-              alt="Logo"
-              className="w-full h-full object-contain p-1"
-            />
-          </div>
+          {/* ЛОГОТИП ТЕПЕРЬ ВЕДЕТ НА ЛЕНДИНГ */}
+          <Link to="/" className="transition-transform active:scale-95">
+            <div className="w-[44px] h-[44px] bg-white rounded-full shadow-sm flex items-center justify-center border border-[#EBF2FF] overflow-hidden cursor-pointer">
+              <img
+                src={Logo}
+                alt="Logo"
+                className="w-full h-full object-contain p-1"
+              />
+            </div>
+          </Link>
           <span className="text-[24px] font-semibold text-[#1A2B4B]">
             SynFAQ
           </span>
@@ -56,7 +54,6 @@ export default function ProjectsPage() {
         </div>
       </header>
 
-      {/* 2. КОНТЕНТ */}
       <main className="max-w-[1200px] mx-auto pt-[60px] px-6">
         <div className="mb-12">
           <h1 className="text-[48px] font-semibold text-[#1A2B4B] mb-2">
@@ -67,7 +64,6 @@ export default function ProjectsPage() {
           </p>
         </div>
 
-        {/* 3. КАРТОЧКИ СТАТИСТИКИ (Динамические) */}
         <div className="grid grid-cols-2 gap-8 mb-16">
           <div className="bg-white p-10 rounded-[32px] shadow-sm border border-[#EBF2FF] flex items-center gap-8 group hover:shadow-md transition-all">
             <div className="w-20 h-20 bg-blue-50 rounded-[24px] flex items-center justify-center text-[#2051FF] group-hover:scale-110 transition-transform">
@@ -98,7 +94,6 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {/* 4. СЕКЦИЯ ПРОЕКТОВ */}
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-[32px] font-semibold text-[#1A2B4B]">
             Мои проекты
@@ -111,7 +106,6 @@ export default function ProjectsPage() {
           </Link>
         </div>
 
-        {/* 5. СПИСОК ПРОЕКТОВ */}
         {isLoading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-12 h-12 text-[#2051FF] animate-spin" />
@@ -158,8 +152,7 @@ export default function ProjectsPage() {
                 </div>
 
                 <div className="flex gap-4">
-                  {/* Переход в админку конкретного проекта по его ID */}
-                  <Link to={`/admin/${project.id}`} className="flex-1">
+                  <Link to={`/admin/${project.slug}`} className="flex-1">
                     <Button
                       variant="secondary"
                       className="w-full h-[52px] bg-[#F1F3F5] hover:bg-[#E9ECEF] text-[#1A2B4B] rounded-[12px] text-[16px] font-medium"

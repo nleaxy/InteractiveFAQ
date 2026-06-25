@@ -39,12 +39,13 @@ import { useFaqStore } from "@/store/useFaqStore";
 import Logo from "@/assets/logo.png";
 
 export default function Dashboard() {
-  const { projectId } = useParams();
+  // 1. Берем projectSlug вместо projectId из параметров URL
+  const { projectSlug } = useParams();
 
   const {
-    projects,
+    activeProject, // Текущий найденный проект
+    fetchProjectBySlug, // Новая функция поиска по тексту
     currentProjectFaqs,
-    fetchProjects,
     fetchProjectFaqs,
     addFaq,
     deleteFaq,
@@ -72,21 +73,22 @@ export default function Dashboard() {
   const [editAnswer, setEditAnswer] = useState("");
   const [editCategory, setEditCategory] = useState("");
 
+  // 2. Логика загрузки: сначала ищем ID по слагу, потом грузим вопросы
   useEffect(() => {
-    if (projectId) {
-      fetchProjects();
-      fetchProjectFaqs(Number(projectId));
-    }
-  }, [projectId]);
+    const loadData = async () => {
+      if (projectSlug) {
+        const foundProject = await fetchProjectBySlug(projectSlug);
+        if (foundProject) {
+          fetchProjectFaqs(foundProject.id);
+        }
+      }
+    };
+    loadData();
+  }, [projectSlug]);
 
-  const project = projects.find((p) => String(p.id) === String(projectId));
-
-  // 1. УМНАЯ ЛОГИКА КАТЕГОРИЙ (добавляем временно созданные)
   const uniqueCategories = useMemo(() => {
     const names = currentProjectFaqs.map((f) => f.category).filter(Boolean);
     const unique = Array.from(new Set(names));
-
-    // Если мы создали категорию, но вопросов в ней еще нет - все равно показываем её в списке
     if (selectedCategory && !unique.includes(selectedCategory)) {
       unique.push(selectedCategory);
     }
@@ -107,7 +109,8 @@ export default function Dashboard() {
     if (!newQuestion || !newAnswer || !selectedCategory)
       return alert("Заполните все поля и выберите категорию");
 
-    await addFaq(Number(projectId), {
+    // Используем activeProject.id
+    await addFaq(activeProject!.id, {
       question: newQuestion,
       answer: newAnswer,
       category: selectedCategory,
@@ -119,12 +122,10 @@ export default function Dashboard() {
     setIsDialogOpen(false);
   };
 
-  // 2. ИСПРАВЛЕННАЯ ЛОГИКА ДОБАВЛЕНИЯ КАТЕГОРИИ
   const handleAddCategory = () => {
     if (!newCatName) return;
-
-    setSelectedCategory(newCatName); // Делаем её выбранной для будущего вопроса
-    setActiveFilterCategory(newCatName); // Переключаем фильтр на неё сразу
+    setSelectedCategory(newCatName);
+    setActiveFilterCategory(newCatName);
     setIsCatDialogOpen(false);
     setNewCatName("");
   };
@@ -138,8 +139,8 @@ export default function Dashboard() {
   };
 
   const handleUpdateFaq = async () => {
-    if (editId) {
-      await updateFaq(Number(projectId), editId, {
+    if (editId && activeProject) {
+      await updateFaq(activeProject.id, editId, {
         question: editQuestion,
         answer: editAnswer,
         category: editCategory,
@@ -149,7 +150,7 @@ export default function Dashboard() {
     }
   };
 
-  if (!project && !isLoading) return null;
+  if (!activeProject && !isLoading) return null;
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] font-sans pb-20 relative overflow-x-hidden">
@@ -165,7 +166,7 @@ export default function Dashboard() {
         </Link>
         <div className="flex flex-col justify-center">
           <h1 className="text-[40px] leading-[1.1] font-semibold text-[#1A2B4B]">
-            SynFAQ {project?.title || "StepStyle"}
+            SynFAQ {activeProject?.title || "Загрузка..."}
           </h1>
           <p className="text-[#2051FF] text-[20px] font-medium mt-0 italic">
             Управление базой знаний
@@ -259,9 +260,9 @@ export default function Dashboard() {
               Теги для главной страницы (через запятую)
             </label>
             <Input
-              value={project?.popularQueries || ""}
+              value={activeProject?.popularQueries || ""}
               onChange={(e) =>
-                updateSettings(Number(projectId), e.target.value)
+                updateSettings(activeProject!.id, e.target.value)
               }
               className="w-full h-[56px] bg-[#F9FBFF] border-[#D8DCE8] rounded-[14px] px-6 text-[18px]"
             />
@@ -372,7 +373,7 @@ export default function Dashboard() {
                       className="w-[44px] h-[44px] text-[#FF2D6D] hover:bg-pink-100/50 rounded-full"
                       onClick={() => {
                         if (confirm("Удалить?"))
-                          deleteFaq(Number(projectId), faq.id);
+                          deleteFaq(activeProject!.id, faq.id);
                       }}
                     >
                       <Trash2 size={24} />

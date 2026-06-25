@@ -15,7 +15,6 @@ export default function GeneratePage() {
   const [projectTitle, setProjectTitle] = useState("");
   const [urlSlug, setUrlSlug] = useState("");
 
-  // Состояния для ИИ
   const [description, setDescription] = useState("");
   const [count, setCount] = useState("10");
 
@@ -27,14 +26,15 @@ export default function GeneratePage() {
 
     setIsSubmitting(true);
     try {
-      // 1. ВСЕГДА СОЗДАЕМ ПРОЕКТ ПЕРВЫМ ДЕЛОМ
+      // 1. Создаем проект (Бэк вернет объект с id и slug)
       const projectRes = await api.post("/api/projects", {
         title: projectTitle,
         slug: urlSlug,
       });
+
       const newProjectId = projectRes.data.id;
 
-      // 2. ЕСЛИ ЭТО ИИ - ЗАПУСКАЕМ ГЕНЕРАЦИЮ (И ждем её)
+      // 2. Если режим ИИ - запускаем генерацию (используем числовой ID для запроса)
       if (mode === "ai") {
         if (!description) {
           alert("Введите описание для ИИ");
@@ -44,9 +44,9 @@ export default function GeneratePage() {
         await generateFaq(newProjectId, description, parseInt(count));
       }
 
-      // 3. ЕСЛИ РУЧНОЙ - МГНОВЕННО ПЕРЕХОДИМ (Никаких лишних ожиданий)
-      // Если ИИ - тоже переходим после завершения генерации
-      navigate(`/admin/${newProjectId}`);
+      // 3. ПЕРЕХОДИМ В АДМИНКУ ПО СЛАГУ (Текстовой ссылке)
+      // Теперь URL будет выглядеть как /admin/my-shop вместо /admin/3
+      navigate(`/admin/${urlSlug}`);
     } catch (error: any) {
       console.error(error);
       alert(error.response?.data?.detail || "Ошибка при создании проекта");
@@ -82,12 +82,14 @@ export default function GeneratePage() {
           <div className="bg-[#F0F2F5] p-1.5 rounded-full flex w-[360px] shadow-inner">
             <button
               onClick={() => setMode("ai")}
+              disabled={isSubmitting}
               className={`flex-1 h-[44px] rounded-full text-[16px] font-semibold transition-all ${mode === "ai" ? "bg-white text-[#2051FF] shadow-sm" : "text-[#94A3B8]"}`}
             >
               Генерация
             </button>
             <button
               onClick={() => setMode("manual")}
+              disabled={isSubmitting}
               className={`flex-1 h-[44px] rounded-full text-[16px] font-semibold transition-all ${mode === "manual" ? "bg-white text-[#2051FF] shadow-sm" : "text-[#94A3B8]"}`}
             >
               Ручной
@@ -102,6 +104,7 @@ export default function GeneratePage() {
               Название FAQ
             </label>
             <Input
+              disabled={isSubmitting}
               placeholder="Например: Университет"
               value={projectTitle}
               onChange={(e) => setProjectTitle(e.target.value)}
@@ -117,6 +120,7 @@ export default function GeneratePage() {
                 faq/
               </span>
               <Input
+                disabled={isSubmitting}
                 placeholder="vvedite-url"
                 value={urlSlug}
                 onChange={(e) =>
@@ -129,13 +133,13 @@ export default function GeneratePage() {
         </div>
 
         {mode === "ai" ? (
-          /* РЕЖИМ ГЕНЕРАЦИИ */
           <div className="space-y-10 animate-in fade-in duration-300">
             <div className="space-y-4">
               <label className="text-[18px] font-medium text-[#1A2B4B] ml-2 block italic">
                 Введите описание проекта
               </label>
               <Textarea
+                disabled={isSubmitting}
                 placeholder="Опишите ваш проект..."
                 className="min-h-[160px] bg-white border-[#D8DCE8] border-[1px] rounded-[24px] p-8 text-[18px] text-[#0D1B4C] placeholder:text-[#B0BCCB] focus-visible:ring-0 focus-visible:border-[#2051FF] transition-all resize-none"
                 value={description}
@@ -183,7 +187,7 @@ export default function GeneratePage() {
                 disabled={
                   isSubmitting || parseInt(count) < 5 || parseInt(count) > 20
                 }
-                className="h-[72px] px-10 bg-[#2051FF] hover:bg-blue-700 rounded-[20px] text-[20px] font-semibold text-white shadow-lg flex items-center gap-3 transition-all active:scale-95"
+                className="h-[72px] px-10 bg-[#2051FF] hover:bg-blue-700 disabled:bg-slate-300 rounded-[20px] text-[20px] font-semibold text-white shadow-lg flex items-center gap-3 transition-all active:scale-95"
               >
                 {isSubmitting ? (
                   <Loader2 className="animate-spin" />
@@ -195,7 +199,6 @@ export default function GeneratePage() {
             </div>
           </div>
         ) : (
-          /* РУЧНОЙ РЕЖИМ (Теперь максимально простой) */
           <div className="space-y-12 animate-in fade-in duration-300 py-10">
             <div className="text-center space-y-4">
               <div className="w-20 h-20 bg-blue-50 text-[#2051FF] rounded-full flex items-center justify-center mx-auto">

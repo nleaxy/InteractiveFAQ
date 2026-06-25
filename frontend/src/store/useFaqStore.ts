@@ -4,19 +4,22 @@ import type { FAQ, FaqProject } from "../types/faq";
 
 interface FaqState {
   projects: FaqProject[];
-  currentProjectFaqs: FAQ[]; // Добавили отдельный массив для вопросов текущего проекта
+  publicCatalog: FaqProject[]; // НОВОЕ: Список всех публичных проектов
+  currentProjectFaqs: FAQ[];
+  activeProject: FaqProject | null;
   isLoading: boolean;
-  logout: () => void;
 
   fetchProjects: () => Promise<void>;
-  fetchProjectFaqs: (projectId: string | number) => Promise<void>; // Загрузка вопросов конкретного проекта
+  fetchPublicCatalog: () => Promise<void>; // НОВОЕ: Загрузка витрины
+  fetchProjectBySlug: (slug: string) => Promise<FaqProject | null>;
+  fetchProjectFaqs: (projectId: number | string) => Promise<void>;
 
   addProject: (title: string, slug: string) => Promise<void>;
-  deleteProject: (projectId: string | number) => Promise<void>;
+  deleteProject: (projectId: number | string) => Promise<void>;
 
-  // FAQ CRUD (В соответствии с FastAPI: вопрос содержит поле category: string)
+  // FAQ CRUD
   addFaq: (
-    projectId: string | number,
+    projectId: number | string,
     faqData: {
       question: string;
       answer: string;
@@ -26,13 +29,13 @@ interface FaqState {
   ) => Promise<void>;
 
   deleteFaq: (
-    projectId: string | number,
-    faqId: string | number,
+    projectId: number | string,
+    faqId: number | string,
   ) => Promise<void>;
 
   updateFaq: (
-    projectId: string | number,
-    faqId: string | number,
+    projectId: number | string,
+    faqId: number | string,
     updatedFaq: {
       question: string;
       answer: string;
@@ -41,28 +44,29 @@ interface FaqState {
     },
   ) => Promise<void>;
 
-  // PATCH /api/projects/{projectId}/settings
   updateSettings: (
-    projectId: string | number,
+    projectId: number | string,
     popularQueries: string,
   ) => Promise<void>;
 
-  // POST /api/projects/v1/generate/
   generateFaq: (
-    projectId: string | number,
+    projectId: number | string,
     description: string,
     count: number,
   ) => Promise<void>;
 
-  getProjectById: (id: string | number) => FaqProject | undefined;
+  getProjectById: (id: number | string) => FaqProject | undefined;
+  logout: () => void;
 }
 
 export const useFaqStore = create<FaqState>((set, get) => ({
   projects: [],
+  publicCatalog: [], // Начальное состояние пустое
   currentProjectFaqs: [],
+  activeProject: null,
   isLoading: false,
 
-  // GET /api/projects
+  // 1. Личные проекты пользователя
   fetchProjects: async () => {
     set({ isLoading: true });
     try {
@@ -74,17 +78,40 @@ export const useFaqStore = create<FaqState>((set, get) => ({
     }
   },
 
-  // GET /api/projects/{projectId}/faqs
+  // 2. НОВОЕ: Загрузка всех проектов системы для каталога
+  fetchPublicCatalog: async () => {
+    set({ isLoading: true });
+    try {
+      // Используем эндпоинт, который сделал бэкенд
+      const response = await api.get("/api/projects/public");
+      set({ publicCatalog: response.data, isLoading: false });
+    } catch (error) {
+      console.error("Ошибка загрузки публичного каталога:", error);
+      set({ isLoading: false });
+    }
+  },
+
+  fetchProjectBySlug: async (slug: string) => {
+    try {
+      const response = await api.get(`/api/projects/slug/${slug}`);
+      set({ activeProject: response.data });
+      return response.data;
+    } catch (error) {
+      console.error("Проект по слагу не найден:", error);
+      set({ activeProject: null });
+      return null;
+    }
+  },
+
   fetchProjectFaqs: async (projectId) => {
     try {
       const response = await api.get(`/api/projects/${projectId}/faqs`);
       set({ currentProjectFaqs: response.data });
     } catch (error) {
-      console.error("Ошибка загрузки вопросов проекта:", error);
+      console.error("Ошибка загрузки вопросов:", error);
     }
   },
 
-  // POST /api/projects
   addProject: async (title, slug) => {
     try {
       const response = await api.post("/api/projects", { title, slug });
@@ -94,31 +121,28 @@ export const useFaqStore = create<FaqState>((set, get) => ({
     }
   },
 
-  // DELETE /api/projects/{projectId}
   deleteProject: async (projectId) => {
     try {
       await api.delete(`/api/projects/${projectId}`);
       set((state) => ({
-        projects: state.projects.filter((p) => p.id !== projectId),
+        projects: state.projects.filter(
+          (p) => String(p.id) !== String(projectId),
+        ),
       }));
     } catch (error) {
       console.error("Ошибка удаления проекта:", error);
     }
   },
 
-  // POST /api/projects/{projectId}/faqs
   addFaq: async (projectId, faqData) => {
     try {
-      // В FastAPI payload: FAQCreate (question, answer, category, synonyms)
       await api.post(`/api/projects/${projectId}/faqs`, faqData);
-      // После добавления обновляем список вопросов именно этого проекта
       await get().fetchProjectFaqs(projectId);
     } catch (error) {
       console.error("Ошибка добавления FAQ:", error);
     }
   },
 
-  // DELETE /api/projects/{projectId}/faqs/{faqId}
   deleteFaq: async (projectId, faqId) => {
     try {
       await api.delete(`/api/projects/${projectId}/faqs/${faqId}`);
@@ -128,7 +152,6 @@ export const useFaqStore = create<FaqState>((set, get) => ({
     }
   },
 
-  // PUT /api/projects/{projectId}/faqs/{faqId}
   updateFaq: async (projectId, faqId, updatedFaq) => {
     try {
       await api.put(`/api/projects/${projectId}/faqs/${faqId}`, updatedFaq);
@@ -138,51 +161,44 @@ export const useFaqStore = create<FaqState>((set, get) => ({
     }
   },
 
-  // PATCH /api/projects/{projectId}/settings
   updateSettings: async (projectId, popularQueries) => {
     try {
-      // payload: SettingsUpdate { popularQueries: string }
       await api.patch(`/api/projects/${projectId}/settings`, {
         popularQueries,
       });
-      // Обновляем локально в списке проектов
-      set((state) => ({
-        projects: state.projects.map((p) =>
-          p.id === projectId ? { ...p, popularQueries } : p,
-        ),
-      }));
+      if (get().activeProject) {
+        set({ activeProject: { ...get().activeProject!, popularQueries } });
+      }
     } catch (error) {
       console.error("Ошибка обновления настроек:", error);
     }
   },
 
-  // POST /api/projects/v1/generate/?project_id=...
   generateFaq: async (projectId, description, count) => {
     try {
       await api.post(
         `/api/projects/v1/generate/`,
-        // 1. Тело запроса (JSON)
-        {
-          description: description,
-          count: count,
-        },
-        // 2. Query-параметры (пойдут в URL)
-        {
-          params: { project_id: projectId },
-        },
+        { description, count },
+        { params: { project_id: projectId } },
       );
-      // После генерации обновляем список вопросов
       await get().fetchProjectFaqs(projectId);
     } catch (error) {
       console.error("Ошибка генерации:", error);
-      throw error; // Прокидываем ошибку дальше, чтобы GeneratePage её поймал
+      throw error;
     }
   },
 
   getProjectById: (id) =>
     get().projects.find((p) => String(p.id) === String(id)),
+
   logout: () => {
-    set({ projects: [], currentProjectFaqs: [] }); // Очищаем списки
+    // При выходе очищаем и личные проекты, и публичный каталог (на всякий случай)
+    set({
+      projects: [],
+      publicCatalog: [],
+      currentProjectFaqs: [],
+      activeProject: null,
+    });
     localStorage.removeItem("token");
     localStorage.removeItem("user_name");
   },
