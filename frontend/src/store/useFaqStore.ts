@@ -4,20 +4,21 @@ import type { FAQ, FaqProject } from "../types/faq";
 
 interface FaqState {
   projects: FaqProject[];
-  publicCatalog: FaqProject[]; // НОВОЕ: Список всех публичных проектов
+  publicCatalog: FaqProject[];
   currentProjectFaqs: FAQ[];
   activeProject: FaqProject | null;
   isLoading: boolean;
 
   fetchProjects: () => Promise<void>;
-  fetchPublicCatalog: () => Promise<void>; // НОВОЕ: Загрузка витрины
+  fetchPublicCatalog: () => Promise<void>;
   fetchProjectBySlug: (slug: string) => Promise<FaqProject | null>;
   fetchProjectFaqs: (projectId: number | string) => Promise<void>;
+
+  searchFaqs: (projectId: number | string, query: string) => Promise<void>;
 
   addProject: (title: string, slug: string) => Promise<void>;
   deleteProject: (projectId: number | string) => Promise<void>;
 
-  // FAQ CRUD
   addFaq: (
     projectId: number | string,
     faqData: {
@@ -61,12 +62,11 @@ interface FaqState {
 
 export const useFaqStore = create<FaqState>((set, get) => ({
   projects: [],
-  publicCatalog: [], // Начальное состояние пустое
+  publicCatalog: [],
   currentProjectFaqs: [],
   activeProject: null,
   isLoading: false,
 
-  // 1. Личные проекты пользователя
   fetchProjects: async () => {
     set({ isLoading: true });
     try {
@@ -78,11 +78,9 @@ export const useFaqStore = create<FaqState>((set, get) => ({
     }
   },
 
-  // 2. НОВОЕ: Загрузка всех проектов системы для каталога
   fetchPublicCatalog: async () => {
     set({ isLoading: true });
     try {
-      // Используем эндпоинт, который сделал бэкенд
       const response = await api.get("/api/projects/public");
       set({ publicCatalog: response.data, isLoading: false });
     } catch (error) {
@@ -109,6 +107,30 @@ export const useFaqStore = create<FaqState>((set, get) => ({
       set({ currentProjectFaqs: response.data });
     } catch (error) {
       console.error("Ошибка загрузки вопросов:", error);
+    }
+  },
+
+  searchFaqs: async (projectId, query) => {
+    set({ isLoading: true });
+    try {
+      const response = await api.get("/api/projects/search", {
+        params: {
+          project_id: projectId,
+          query: query,
+        },
+      });
+
+      if (response.data.matched && response.data.result) {
+        set({
+          currentProjectFaqs: [response.data.result],
+          isLoading: false,
+        });
+      } else {
+        set({ currentProjectFaqs: [], isLoading: false });
+      }
+    } catch (error) {
+      console.error("Ошибка ML-поиска:", error);
+      set({ isLoading: false });
     }
   },
 
@@ -192,7 +214,6 @@ export const useFaqStore = create<FaqState>((set, get) => ({
     get().projects.find((p) => String(p.id) === String(id)),
 
   logout: () => {
-    // При выходе очищаем и личные проекты, и публичный каталог (на всякий случай)
     set({
       projects: [],
       publicCatalog: [],

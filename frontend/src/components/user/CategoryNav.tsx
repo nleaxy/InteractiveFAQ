@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useFaqStore } from "@/store/useFaqStore";
 
@@ -7,7 +8,12 @@ interface CategoryNavProps {
 }
 
 export function CategoryNav({ activeId, onSelect }: CategoryNavProps) {
-  const { categories } = useFaqStore();
+  const currentProjectFaqs = useFaqStore((state) => state.currentProjectFaqs);
+
+  const categories = useMemo(() => {
+    const names = currentProjectFaqs.map((f) => f.category).filter(Boolean);
+    return Array.from(new Set(names));
+  }, [currentProjectFaqs]);
 
   return (
     <div className="flex flex-wrap gap-2">
@@ -18,14 +24,15 @@ export function CategoryNav({ activeId, onSelect }: CategoryNavProps) {
       >
         Все вопросы
       </Button>
-      {categories.map((cat) => (
+
+      {categories.map((catName: string) => (
         <Button
-          key={cat.id}
-          variant={activeId === cat.id ? "default" : "outline"}
-          onClick={() => onSelect(cat.id)}
+          key={catName}
+          variant={activeId === catName ? "default" : "outline"}
+          onClick={() => onSelect(catName)}
           className="rounded-full"
         >
-          {cat.name}
+          {catName}
         </Button>
       ))}
     </div>

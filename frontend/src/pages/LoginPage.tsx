@@ -1,30 +1,27 @@
 import { useState } from "react";
-import { Mail, Lock, User, Loader2 } from "lucide-react"; // Добавили иконку User
+import { Mail, Lock, User, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import api from "@/api/axios";
 import Logo from "@/assets/logo.png";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
 
-  // Состояния для полей
-  const [name, setName] = useState(""); // Добавили поле для имени
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
 
     try {
       if (isLogin) {
-        // --- ЛОГИКА ВХОДА ---
         const response = await api.post("/api/v1/login", {
           email: email,
           password: password,
@@ -33,37 +30,40 @@ export default function LoginPage() {
         const { token, user } = response.data;
         localStorage.setItem("token", token);
         localStorage.setItem("user_name", user.name);
+
+        // 2. Уведомление об успешном входе
+        toast.success(`С возвращением, ${user.name}!`);
         navigate("/projects");
       } else {
-        // --- ЛОГИКА РЕГИСТРАЦИИ (Исправлено) ---
         const response = await api.post("/api/v1/register", {
-          name: name, // Передаем введенное имя
+          name: name,
           email: email,
           password: password,
         });
 
-        // После регистрации бэк сразу отдает токен
         const { token, user } = response.data;
         localStorage.setItem("token", token);
         localStorage.setItem("user_name", user.name);
 
-        alert("Регистрация успешна!");
+        // 3. Красивое уведомление вместо alert
+        toast.success("Аккаунт успешно создан! Добро пожаловать.");
         navigate("/projects");
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      // Выводим ошибку от бэкенда (например, "Пользователь уже существует")
-      setError(
-        err.response?.data?.detail || "Произошла ошибка. Проверьте данные.",
-      );
+      // 4. Вывод ошибки от бэкенда через toast.error
+      const errorMessage =
+        err.response?.data?.detail || "Произошла ошибка. Проверьте данные.";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] flex items-center justify-center p-4 font-sans">
+    <div className="min-h-screen bg-[#F0F2F5] flex items-center justify-center p-4 font-sans text-left">
       <div className="w-full max-w-[540px] bg-white rounded-[32px] shadow-sm p-12 flex flex-col items-center border border-[#EBF2FF]">
+        {/* ЛОГОТИП */}
         <div className="w-[80px] h-[80px] bg-white rounded-full shadow-sm flex items-center justify-center border border-[#EBF2FF] overflow-hidden mb-6">
           <img
             src={Logo}
@@ -72,7 +72,7 @@ export default function LoginPage() {
           />
         </div>
 
-        <h1 className="text-[32px] font-semibold text-[#1A2B4B] mb-2">
+        <h1 className="text-[32px] font-semibold text-[#1A2B4B] mb-2 text-center">
           SynFAQ
         </h1>
         <h2 className="text-[24px] font-medium text-[#0D1B4C] mb-2 text-center leading-tight">
@@ -83,10 +83,7 @@ export default function LoginPage() {
         <div className="w-full max-w-[280px] h-[48px] bg-[#EBF0F7] rounded-full p-1 flex mt-6 mb-8">
           <button
             type="button"
-            onClick={() => {
-              setIsLogin(true);
-              setError("");
-            }}
+            onClick={() => setIsLogin(true)}
             className={`flex-1 rounded-full text-[16px] font-medium transition-all ${
               isLogin ? "bg-white text-[#1A2B4B] shadow-sm" : "text-[#64748B]"
             }`}
@@ -95,10 +92,7 @@ export default function LoginPage() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              setIsLogin(false);
-              setError("");
-            }}
+            onClick={() => setIsLogin(false)}
             className={`flex-1 rounded-full text-[16px] font-medium transition-all ${
               !isLogin ? "bg-white text-[#1A2B4B] shadow-sm" : "text-[#64748B]"
             }`}
@@ -107,14 +101,8 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {error && (
-          <div className="w-full mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm text-center">
-            {error}
-          </div>
-        )}
-
         <form className="w-full space-y-5" onSubmit={handleSubmit}>
-          {/* Поле ИМЯ (Показывается только при регистрации) */}
+          {/* Поле ИМЯ (Регистрация) */}
           {!isLogin && (
             <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
               <label className="text-[16px] font-medium text-[#1A2B4B] ml-1">
@@ -154,11 +142,9 @@ export default function LoginPage() {
 
           {/* Пароль */}
           <div className="space-y-2">
-            <div className="flex justify-between items-center px-1">
-              <label className="text-[16px] font-medium text-[#1A2B4B]">
-                Пароль
-              </label>
-            </div>
+            <label className="text-[16px] font-medium text-[#1A2B4B] ml-1">
+              Пароль
+            </label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94A3B8]" />
               <Input

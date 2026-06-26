@@ -3,8 +3,8 @@ import { Search } from "lucide-react";
 import { VoiceInput } from "./VoiceInput";
 
 interface SearchBarProps {
-  value: string; // Текущий текст поиска
-  onChange: (val: string) => void; // Функция для изменения текста
+  value: string; 
+  onChange: (val: string) => void;
 }
 
 export function SearchBar({ value, onChange }: SearchBarProps) {

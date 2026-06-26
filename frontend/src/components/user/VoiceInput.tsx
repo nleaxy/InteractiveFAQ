@@ -1,4 +1,4 @@
-import { Mic, MicOff, Loader2 } from "lucide-react";
+import { Mic, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSpeech } from "@/hooks/useSpeech";
 import { useEffect } from "react";
@@ -10,7 +10,6 @@ interface VoiceInputProps {
 export function VoiceInput({ onResult }: VoiceInputProps) {
   const { isListening, transcript, startListening, isSupported } = useSpeech();
 
-  // Когда хук получил текст, передаем его наверх (в поиск)
   useEffect(() => {
     if (transcript) {
       onResult(transcript);

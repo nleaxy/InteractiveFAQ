@@ -135,8 +135,6 @@ export default function DocsPage() {
               </div>
             </div>
           </div>
-
-          {/* ПОДСКАЗКА ВНИЗУ */}
           <div className="mt-12 p-8 bg-blue-600 rounded-[28px] text-white flex items-center justify-between shadow-xl shadow-blue-100">
             <div>
               <h3 className="text-[20px] font-bold mb-1">

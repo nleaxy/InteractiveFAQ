@@ -24,7 +24,7 @@ export function FaqAccordion({ items }: FaqAccordionProps) {
       {items.map((faq) => (
         <AccordionItem
           key={faq.id}
-          value={faq.id}
+          value={String(faq.id)}
           className="bg-white border rounded-xl px-4 shadow-sm"
         >
           <AccordionTrigger className="text-left font-medium hover:no-underline py-4">

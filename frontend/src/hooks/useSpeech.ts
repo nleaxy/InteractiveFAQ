@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 
-// Расширяем интерфейс window для поддержки SpeechRecognition в браузерах
 interface IWindow extends Window {
   webkitSpeechRecognition: any;
   SpeechRecognition: any;
@@ -20,9 +19,9 @@ export const useSpeech = () => {
 
     if (SpeechClass) {
       const recognitionInstance = new SpeechClass();
-      recognitionInstance.continuous = false; // Останавливаться после одной фразы
-      recognitionInstance.interimResults = false; // Не показывать промежуточные результаты
-      recognitionInstance.lang = "ru-RU"; // Устанавливаем русский язык
+      recognitionInstance.continuous = false;
+      recognitionInstance.interimResults = false;
+      recognitionInstance.lang = "ru-RU";
 
       recognitionInstance.onstart = () => setIsListening(true);
       recognitionInstance.onend = () => setIsListening(false);
@@ -40,7 +39,7 @@ export const useSpeech = () => {
 
   const startListening = useCallback(() => {
     if (recognition) {
-      setTranscript(""); // Очищаем старый текст
+      setTranscript("");
       recognition.start();
     }
   }, [recognition]);
