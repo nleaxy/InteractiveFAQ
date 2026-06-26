@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Mail, Lock, User, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import api from "@/api/axios";
 import Logo from "@/assets/logo.png";
 import { toast } from "sonner";
@@ -31,7 +31,6 @@ export default function LoginPage() {
         localStorage.setItem("token", token);
         localStorage.setItem("user_name", user.name);
 
-        // 2. Уведомление об успешном входе
         toast.success(`С возвращением, ${user.name}!`);
         navigate("/projects");
       } else {
@@ -45,13 +44,11 @@ export default function LoginPage() {
         localStorage.setItem("token", token);
         localStorage.setItem("user_name", user.name);
 
-        // 3. Красивое уведомление вместо alert
         toast.success("Аккаунт успешно создан! Добро пожаловать.");
         navigate("/projects");
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      // 4. Вывод ошибки от бэкенда через toast.error
       const errorMessage =
         err.response?.data?.detail || "Произошла ошибка. Проверьте данные.";
       toast.error(errorMessage);
@@ -63,14 +60,15 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#F0F2F5] flex items-center justify-center p-4 font-sans text-left">
       <div className="w-full max-w-[540px] bg-white rounded-[32px] shadow-sm p-12 flex flex-col items-center border border-[#EBF2FF]">
-        {/* ЛОГОТИП */}
-        <div className="w-[80px] h-[80px] bg-white rounded-full shadow-sm flex items-center justify-center border border-[#EBF2FF] overflow-hidden mb-6">
-          <img
-            src={Logo}
-            alt="Logo"
-            className="w-full h-full object-contain p-2"
-          />
-        </div>
+        <Link to="/" className="transition-transform active:scale-95 group">
+          <div className="w-[80px] h-[80px] bg-white rounded-full shadow-sm flex items-center justify-center border border-[#EBF2FF] overflow-hidden mb-6 group-hover:border-blue-200 transition-colors">
+            <img
+              src={Logo}
+              alt="Logo"
+              className="w-full h-full object-contain p-2"
+            />
+          </div>
+        </Link>
 
         <h1 className="text-[32px] font-semibold text-[#1A2B4B] mb-2 text-center">
           SynFAQ
