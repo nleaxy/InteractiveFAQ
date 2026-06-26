@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   LayoutGrid,
@@ -21,7 +21,9 @@ import {
 } from "@/components/ui/dialog";
 
 export default function ProjectsPage() {
-  const { projects, fetchProjects, deleteProject, isLoading } = useFaqStore();
+  const navigate = useNavigate();
+  const { projects, fetchProjects, deleteProject, logout, isLoading } =
+    useFaqStore();
 
   const [isDelModalOpen, setIsDelOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<{
@@ -39,6 +41,13 @@ export default function ProjectsPage() {
     0,
   );
   const userName = localStorage.getItem("user_name") || "Александр";
+
+  // ФУНКЦИЯ ВЫХОДА
+  const handleLogoutClick = () => {
+    logout();
+    toast.success("Вы вышли из системы");
+    navigate("/");
+  };
 
   const askDelete = (id: number | string, title: string) => {
     setProjectToDelete({ id, title });
@@ -81,14 +90,14 @@ export default function ProjectsPage() {
           <span className="text-[#4A5568] text-sm md:text-[16px] hidden sm:block">
             Здравствуйте, {userName}
           </span>
-          <Link to="/login">
-            <Button
-              variant="ghost"
-              className="text-[#64748B] hover:text-[#2051FF] h-9 md:h-10 text-sm md:text-base"
-            >
-              Выйти
-            </Button>
-          </Link>
+          {/* ИЗМЕНЕНО: Убрали Link, добавили onClick и handleLogoutClick */}
+          <Button
+            onClick={handleLogoutClick}
+            variant="ghost"
+            className="text-[#64748B] hover:text-[#2051FF] h-9 md:h-10 text-sm md:text-base"
+          >
+            Выйти
+          </Button>
         </div>
       </header>
 
@@ -143,13 +152,14 @@ export default function ProjectsPage() {
             </Button>
           </Link>
         </div>
+
         {isLoading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-10 h-10 text-[#2051FF] animate-spin" />
           </div>
         ) : projects.length === 0 ? (
           <div className="bg-white rounded-[24px] p-12 md:p-20 text-center border-2 border-dashed border-slate-200">
-            <p className="text-slate-400 text-lg italic">
+            <p className="text-slate-400 text-lg italic px-4">
               У вас пока нет проектов. Создайте свой первый FAQ!
             </p>
           </div>
@@ -164,19 +174,23 @@ export default function ProjectsPage() {
                   <h3 className="text-xl md:text-[28px] font-semibold text-[#1A2B4B] leading-tight truncate">
                     {project.title}
                   </h3>
-                  <span className="flex-shrink-0 px-3 py-1 bg-green-50 text-green-600 rounded-full text-xs font-medium border border-green-100">
+                  <span className="flex-shrink-0 px-3 py-1 bg-green-50 text-green-600 rounded-full text-xs md:text-[14px] font-medium border border-green-100">
                     Активен
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 md:gap-4 mb-8">
                   <div className="bg-[#F8FAFC] p-3 md:p-4 rounded-xl">
-                    <p className="text-[12px] text-[#64748B] mb-1">Создан</p>
+                    <p className="text-[12px] md:text-[14px] text-[#64748B] mb-1">
+                      Создан
+                    </p>
                     <p className="text-sm md:text-[16px] font-medium text-[#1A2B4B]">
                       {project.createdAt}
                     </p>
                   </div>
                   <div className="bg-[#F8FAFC] p-3 md:p-4 rounded-xl">
-                    <p className="text-[12px] text-[#64748B] mb-1">Вопросы</p>
+                    <p className="text-[12px] md:text-[14px] text-[#64748B] mb-1">
+                      Вопросы
+                    </p>
                     <p className="text-sm md:text-[16px] font-medium text-[#1A2B4B]">
                       {project.questionsCount}
                     </p>
@@ -186,14 +200,14 @@ export default function ProjectsPage() {
                   <Link to={`/admin/${project.slug}`} className="flex-1">
                     <Button
                       variant="secondary"
-                      className="w-full h-11 md:h-[52px] bg-[#F1F3F5] hover:bg-[#E9ECEF] text-[#1A2B4B] rounded-xl text-sm font-medium"
+                      className="w-full h-11 md:h-[52px] bg-[#F1F3F5] hover:bg-[#E9ECEF] text-[#1A2B4B] rounded-xl text-sm md:text-[16px] font-medium"
                     >
                       Правка
                     </Button>
                   </Link>
                   <Button
                     onClick={() => askDelete(project.id, project.title)}
-                    className="flex-1 h-11 md:h-[52px] bg-[#FF2D6D] hover:bg-[#E0245E] text-white rounded-xl text-sm font-medium"
+                    className="flex-1 h-11 md:h-[52px] bg-[#FF2D6D] hover:bg-[#E0245E] text-white rounded-xl text-sm md:text-[16px] font-medium"
                   >
                     Удалить
                   </Button>
@@ -218,7 +232,7 @@ export default function ProjectsPage() {
               <span className="font-bold text-[#1A2B4B]">
                 "{projectToDelete?.title}"
               </span>
-              . Это действие нельзя будет отменить, все вопросы будут стерты.
+              . Это действие нельзя будет отменить.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="grid grid-cols-2 gap-4 mt-8">

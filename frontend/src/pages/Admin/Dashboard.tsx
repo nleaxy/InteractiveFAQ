@@ -8,6 +8,7 @@ import {
   ExternalLink,
   X,
   Share2,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Link, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner"; // 1. Импортируем toast
+import { toast } from "sonner";
 import {
   Accordion,
   AccordionContent,
@@ -34,6 +35,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useFaqStore } from "@/store/useFaqStore";
@@ -58,6 +61,7 @@ export default function Dashboard() {
     string | null
   >(null);
 
+  // Состояния для форм
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newQuestion, setNewQuestion] = useState("");
   const [newAnswer, setNewAnswer] = useState("");
@@ -71,6 +75,19 @@ export default function Dashboard() {
   const [editQuestion, setEditQuestion] = useState("");
   const [editAnswer, setEditAnswer] = useState("");
   const [editCategory, setEditCategory] = useState("");
+
+  // СОСТОЯНИЯ ДЛЯ МОДАЛОК УДАЛЕНИЯ (НОВОЕ)
+  const [isDelFaqModalOpen, setIsDelFaqModalOpen] = useState(false);
+  const [faqToDelete, setFaqToDelete] = useState<{
+    id: number;
+    question: string;
+  } | null>(null);
+
+  const [isDelCatModalOpen, setIsDelCatModalOpen] = useState(false);
+  const [catToDelete, setCatToDelete] = useState<{
+    name: string;
+    count: number;
+  } | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -106,21 +123,19 @@ export default function Dashboard() {
   const handleShare = () => {
     const shareUrl = `${window.location.origin}/faq/${activeProject?.slug}`;
     navigator.clipboard.writeText(shareUrl);
-    toast.success("Ссылка скопирована в буфер обмена!"); // Заменили alert
+    toast.success("Ссылка скопирована в буфер обмена!");
   };
 
   const handleAddFaq = async () => {
     if (!newQuestion || !newAnswer || !selectedCategory) {
-      return toast.error("Пожалуйста, заполните все поля"); // Заменили alert
+      return toast.error("Пожалуйста, заполните все поля");
     }
-
     await addFaq(activeProject!.id, {
       question: newQuestion,
       answer: newAnswer,
       category: selectedCategory,
       synonyms: [],
     });
-
     toast.success("Вопрос успешно добавлен");
     setNewQuestion("");
     setNewAnswer("");
@@ -136,17 +151,42 @@ export default function Dashboard() {
     toast.info(`Категория "${newCatName}" создана`);
   };
 
-  const handleDeleteCategory = async (e: React.MouseEvent, catName: string) => {
+  // --- ЛОГИКА УДАЛЕНИЯ КАТЕГОРИИ ---
+  const askDeleteCategory = (e: React.MouseEvent, catName: string) => {
     e.stopPropagation();
-    if (confirm(`Удалить категорию "${catName}" и все её вопросы?`)) {
+    const count = currentProjectFaqs.filter(
+      (f) => f.category === catName,
+    ).length;
+    setCatToDelete({ name: catName, count });
+    setIsDelCatModalOpen(true);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (catToDelete && activeProject) {
       const categoryFaqs = currentProjectFaqs.filter(
-        (f) => f.category === catName,
+        (f) => f.category === catToDelete.name,
       );
       for (const faq of categoryFaqs) {
-        await deleteFaq(activeProject!.id, faq.id);
+        await deleteFaq(activeProject.id, faq.id);
       }
-      toast.success("Категория удалена");
-      if (activeFilterCategory === catName) setActiveFilterCategory(null);
+      toast.success(`Категория "${catToDelete.name}" удалена`);
+      if (activeFilterCategory === catToDelete.name)
+        setActiveFilterCategory(null);
+      setIsDelCatModalOpen(false);
+    }
+  };
+
+  // --- ЛОГИКА УДАЛЕНИЯ ВОПРОСА ---
+  const askDeleteFaq = (faq: any) => {
+    setFaqToDelete({ id: faq.id, question: faq.question });
+    setIsDelFaqModalOpen(true);
+  };
+
+  const confirmDeleteFaq = async () => {
+    if (faqToDelete && activeProject) {
+      await deleteFaq(activeProject.id, faqToDelete.id);
+      toast.success("Вопрос удален");
+      setIsDelFaqModalOpen(false);
     }
   };
 
@@ -175,6 +215,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] font-sans pb-20 relative overflow-x-hidden">
+      {/* HEADER */}
       <header className="pt-6 md:pt-[49px] px-4 md:px-[49px] flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex flex-col md:flex-row items-center gap-4 md:gap-[28px] text-center md:text-left">
           <Link to="/" className="transition-transform active:scale-95">
@@ -236,6 +277,7 @@ export default function Dashboard() {
             />
           </div>
 
+          {/* КАТЕГОРИИ */}
           <div className="mt-6 md:mt-8 flex flex-wrap gap-2 items-center">
             <div className="flex items-center gap-2 mr-2 text-slate-400">
               <Filter size={16} />{" "}
@@ -265,8 +307,8 @@ export default function Dashboard() {
                 >
                   {catName}
                   <span
-                    onClick={(e) => handleDeleteCategory(e, catName)}
-                    className="absolute right-2 p-0.5 rounded-full hover:bg-black/10 text-slate-400"
+                    onClick={(e) => askDeleteCategory(e, catName)}
+                    className="absolute right-2 p-0.5 rounded-full hover:bg-black/10 text-slate-400 transition-colors"
                   >
                     <X size={12} />
                   </span>
@@ -358,6 +400,7 @@ export default function Dashboard() {
             </Dialog>
           </div>
 
+          {/* СПИСОК FAQ */}
           <div className="mt-8 space-y-4 w-full pb-20">
             {isLoading ? (
               <div className="flex justify-center py-10">
@@ -402,12 +445,7 @@ export default function Dashboard() {
                       variant="ghost"
                       size="icon"
                       className="w-10 h-10 text-[#FF2D6D] hover:bg-pink-50 rounded-full"
-                      onClick={async () => {
-                        if (confirm("Удалить?")) {
-                          await deleteFaq(activeProject!.id, faq.id);
-                          toast.success("Вопрос удален");
-                        }
-                      }}
+                      onClick={() => askDeleteFaq(faq)}
                     >
                       <Trash2 size={20} />
                     </Button>
@@ -423,6 +461,7 @@ export default function Dashboard() {
         </div>
       </main>
 
+      {/* МОДАЛКА РЕДАКТИРОВАНИЯ */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="bg-white rounded-2xl p-6 w-[90%] max-w-[500px]">
           <DialogHeader>
@@ -456,6 +495,82 @@ export default function Dashboard() {
               Сохранить изменения
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* МОДАЛКА УДАЛЕНИЯ ВОПРОСА */}
+      <Dialog open={isDelFaqModalOpen} onOpenChange={setIsDelFaqModalOpen}>
+        <DialogContent className="bg-white rounded-[32px] p-8 max-w-[440px] border-none shadow-2xl">
+          <DialogHeader className="flex flex-col items-center text-center">
+            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-4">
+              <AlertTriangle size={40} />
+            </div>
+            <DialogTitle className="text-[24px] font-bold text-[#1A2B4B]">
+              Удалить вопрос?
+            </DialogTitle>
+            <DialogDescription className="text-[16px] text-[#64748B] mt-2">
+              Вы уверены, что хотите удалить вопрос: <br />
+              <span className="font-bold text-[#1A2B4B]">
+                "{faqToDelete?.question}"
+              </span>
+              ?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="grid grid-cols-2 gap-4 mt-8">
+            <Button
+              variant="outline"
+              onClick={() => setIsDelFaqModalOpen(false)}
+              className="h-[56px] rounded-xl border-[#D8DCE8] text-[#1A2B4B]"
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={confirmDeleteFaq}
+              className="h-[56px] rounded-xl bg-[#FF2D6D] hover:bg-red-700 text-white shadow-lg"
+            >
+              Удалить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* МОДАЛКА УДАЛЕНИЯ КАТЕГОРИИ */}
+      <Dialog open={isDelCatModalOpen} onOpenChange={setIsDelCatModalOpen}>
+        <DialogContent className="bg-white rounded-[32px] p-8 max-w-[440px] border-none shadow-2xl">
+          <DialogHeader className="flex flex-col items-center text-center">
+            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-4">
+              <AlertTriangle size={40} />
+            </div>
+            <DialogTitle className="text-[24px] font-bold text-[#1A2B4B]">
+              Удалить категорию?
+            </DialogTitle>
+            <DialogDescription className="text-[16px] text-[#64748B] mt-2">
+              Это удалит категорию{" "}
+              <span className="font-bold text-[#1A2B4B]">
+                "{catToDelete?.name}"
+              </span>
+              и все привязанные к ней вопросы (
+              <span className="font-bold text-[#1A2B4B]">
+                {catToDelete?.count} шт.
+              </span>
+              ).
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="grid grid-cols-2 gap-4 mt-8">
+            <Button
+              variant="outline"
+              onClick={() => setIsDelCatModalOpen(false)}
+              className="h-[56px] rounded-xl border-[#D8DCE8] text-[#1A2B4B]"
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={confirmDeleteCategory}
+              className="h-[56px] rounded-xl bg-[#FF2D6D] hover:bg-red-700 text-white shadow-lg"
+            >
+              Удалить всё
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
