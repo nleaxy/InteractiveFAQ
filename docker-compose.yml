@@ -12,12 +12,32 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  backend:
+    build: ./backend
+    container_name: faq-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\" || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
   frontend:
     build: ./frontend
     container_name: faq-frontend
     ports:
       - "80:80"
     restart: always
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   postgres_data:
