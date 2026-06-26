@@ -1,28 +1,54 @@
-import { useState } from "react";
-import { Upload, Sparkles, ChevronLeft, Plus, Loader2 } from "lucide-react";
+import { useState, useRef } from "react"; // Добавили useRef
+import {
+  Upload,
+  Sparkles,
+  ChevronLeft,
+  Plus,
+  Loader2,
+  FileText,
+  X,
+} from "lucide-react"; // Добавили иконки файла
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Link, useNavigate } from "react-router-dom";
 import { useFaqStore } from "@/store/useFaqStore";
 import api from "@/api/axios";
-import { toast } from "sonner"; // Импортируем toast
+import { toast } from "sonner";
 
 export default function GeneratePage() {
   const navigate = useNavigate();
-  const { generateFaq } = useFaqStore();
+  // Достаем обе функции генерации из стора
+  const { generateFaq, generateFaqFromFile } = useFaqStore();
+
+  // Реф для управления скрытым инпутом
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [mode, setMode] = useState<"ai" | "manual">("ai");
   const [projectTitle, setProjectTitle] = useState("");
   const [urlSlug, setUrlSlug] = useState("");
-
   const [description, setDescription] = useState("");
   const [count, setCount] = useState("10");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null); // Стейт для файла
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Функция открытия окна выбора файла
+  const handleZoneClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Обработка выбора файла
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      setDescription(""); // Очищаем текст, если выбран файл
+      toast.success(`Файл ${file.name} готов к загрузке`);
+    }
+  };
+
   const handleCreateProject = async () => {
-    // Валидация полей через toast
     if (!projectTitle || !urlSlug) {
       return toast.error("Заполните название и URL проекта");
     }
@@ -34,31 +60,36 @@ export default function GeneratePage() {
         title: projectTitle,
         slug: urlSlug,
       });
-
       const newProjectId = projectRes.data.id;
 
-      // 2. Логика в зависимости от режима
+      // 2. Логика генерации
       if (mode === "ai") {
-        if (!description) {
-          toast.error("Введите описание для ИИ");
+        if (selectedFile) {
+          // --- ВАРИАНТ А: ГЕНЕРАЦИЯ ИЗ ФАЙЛА ---
+          toast.info("Загружаем файл и анализируем данные...");
+          await generateFaqFromFile(
+            newProjectId,
+            selectedFile,
+            parseInt(count),
+          );
+        } else if (description) {
+          // --- ВАРИАНТ Б: ГЕНЕРАЦИЯ ИЗ ТЕКСТА ---
+          toast.info("ИИ начал генерацию вопросов по описанию...");
+          await generateFaq(newProjectId, description, parseInt(count));
+        } else {
+          toast.error("Введите описание или загрузите файл");
           setIsSubmitting(false);
           return;
         }
-
-        // Уведомление о начале долгого процесса
-        toast.info("ИИ начал генерацию вопросов. Пожалуйста, подождите...");
-
-        await generateFaq(newProjectId, description, parseInt(count));
       }
 
-      // 3. Успешное завершение
       toast.success("Проект успешно создан!");
       navigate(`/admin/${urlSlug}`);
     } catch (error: any) {
       console.error(error);
-      const errorMessage =
-        error.response?.data?.detail || "Ошибка при создании проекта";
-      toast.error(errorMessage);
+      toast.error(
+        error.response?.data?.detail || "Ошибка при создании проекта",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -74,7 +105,7 @@ export default function GeneratePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] font-sans flex flex-col items-center justify-center p-4 md:p-6 pb-20 uppercase-none">
+    <div className="min-h-screen bg-[#F0F2F5] font-sans flex flex-col items-center justify-center p-4 md:p-6 pb-20">
       <div className="w-full max-w-[840px] mb-4">
         <Link
           to="/projects"
@@ -86,6 +117,7 @@ export default function GeneratePage() {
       </div>
 
       <div className="bg-white w-full max-w-[840px] rounded-[32px] md:rounded-[40px] shadow-sm border border-[#EBF2FF] p-6 md:p-16 relative overflow-hidden">
+        {/* ТАБЫ */}
         <div className="flex justify-center mb-8 md:mb-10">
           <div className="bg-[#F0F2F5] p-1.5 rounded-full flex w-full max-w-[360px] shadow-inner">
             <button
@@ -105,6 +137,7 @@ export default function GeneratePage() {
           </div>
         </div>
 
+        {/* ПОЛЯ ПРОЕКТА */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 md:mb-12 pb-8 md:pb-10 border-b border-[#F1F3F5]">
           <div className="space-y-2 md:space-y-3">
             <label className="text-sm md:text-[16px] font-semibold text-[#1A2B4B] ml-2">
@@ -115,7 +148,7 @@ export default function GeneratePage() {
               placeholder="Например: Университет"
               value={projectTitle}
               onChange={(e) => setProjectTitle(e.target.value)}
-              className="h-14 md:h-[60px] bg-white border-[#D8DCE8] rounded-xl md:rounded-[18px] px-6 text-base md:text-[18px] focus-visible:ring-0 focus-visible:border-[#2051FF]"
+              className="h-14 md:h-[60px] rounded-xl md:rounded-[18px] px-6 text-base md:text-[18px]"
             />
           </div>
           <div className="space-y-2 md:space-y-3">
@@ -133,7 +166,7 @@ export default function GeneratePage() {
                 onChange={(e) =>
                   setUrlSlug(e.target.value.toLowerCase().replace(/\s+/g, "-"))
                 }
-                className="h-14 md:h-[60px] bg-white border-[#D8DCE8] rounded-xl md:rounded-[18px] pl-14 md:pl-[74px] pr-6 text-base md:text-[18px] focus-visible:ring-0 focus-visible:border-[#2051FF]"
+                className="h-14 md:h-[60px] rounded-xl md:rounded-[18px] pl-14 md:pl-[74px] pr-6 text-base md:text-[18px]"
               />
             </div>
           </div>
@@ -141,18 +174,24 @@ export default function GeneratePage() {
 
         {mode === "ai" ? (
           <div className="space-y-8 md:space-y-10 animate-in fade-in duration-300">
+            {/* ТЕКСТОВОЕ ОПИСАНИЕ */}
             <div className="space-y-3 md:space-y-4">
               <label className="text-base md:text-[18px] font-medium text-[#1A2B4B] ml-2 block italic">
                 Введите описание проекта
               </label>
               <Textarea
-                disabled={isSubmitting}
-                placeholder="Опишите ваш проект..."
-                className="min-h-[140px] md:min-h-[160px] bg-white border-[#D8DCE8] border-[1px] rounded-[24px] p-6 md:p-8 text-base md:text-[18px] text-[#0D1B4C] placeholder:text-[#B0BCCB] focus-visible:ring-0 focus-visible:border-[#2051FF] transition-all resize-none"
+                disabled={isSubmitting || !!selectedFile}
+                placeholder={
+                  selectedFile
+                    ? "Файл выбран. Для ввода текста удалите файл."
+                    : "Опишите ваш проект..."
+                }
+                className="min-h-[140px] md:min-h-[160px] bg-white border-[#D8DCE8] rounded-[24px] p-6 md:p-8 text-base md:text-[18px] resize-none"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
+
             <div className="relative flex items-center justify-center">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-[#E2E8F0]"></div>
@@ -161,20 +200,60 @@ export default function GeneratePage() {
                 ИЛИ
               </div>
             </div>
+
+            {/* ЗОНА ЗАГРУЗКИ ФАЙЛА */}
             <div className="space-y-3 md:space-y-4">
               <label className="text-base md:text-[18px] font-medium text-[#1A2B4B] ml-2 block italic">
-                Загрузите файл с данными
+                Загрузите файл с данными (PDF, TXT, DOCX)
               </label>
-              <div className="border-2 border-dashed border-[#D8DCE8] rounded-[24px] md:rounded-[28px] bg-white p-6 md:p-10 flex flex-col items-center justify-center group hover:border-[#2051FF] hover:bg-blue-50/20 transition-all cursor-pointer">
-                <Upload className="w-6 h-6 md:w-8 md:h-8 text-[#2051FF] mb-3 md:mb-4 group-hover:scale-110 transition-transform" />
-                <p className="text-sm md:text-[18px] text-[#1A2B4B] font-medium text-center px-2">
-                  Перетащите файл или{" "}
-                  <span className="text-[#2051FF] underline underline-offset-4">
-                    выберите его
-                  </span>
-                </p>
+
+              {/* Скрытый инпут */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept=".pdf,.txt,.docx"
+              />
+
+              <div
+                onClick={handleZoneClick}
+                className={`border-2 border-dashed rounded-[24px] md:rounded-[28px] p-6 md:p-10 flex flex-col items-center justify-center group transition-all cursor-pointer ${
+                  selectedFile
+                    ? "border-[#2051FF] bg-blue-50/50"
+                    : "border-[#D8DCE8] bg-white hover:border-[#2051FF] hover:bg-blue-50/20"
+                }`}
+              >
+                {selectedFile ? (
+                  <div className="flex flex-col items-center">
+                    <FileText className="w-12 h-12 text-[#2051FF] mb-3 animate-bounce-slow" />
+                    <p className="text-[#2051FF] font-bold text-lg mb-2">
+                      {selectedFile.name}
+                    </p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedFile(null);
+                      }}
+                      className="flex items-center gap-1 text-red-500 hover:text-red-700 text-sm font-medium transition-colors"
+                    >
+                      <X size={16} /> Удалить файл
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="w-6 h-6 md:w-8 md:h-8 text-[#2051FF] mb-3 md:mb-4 group-hover:scale-110 transition-transform" />
+                    <p className="text-sm md:text-[18px] text-[#1A2B4B] font-medium text-center">
+                      Перетащите файл или{" "}
+                      <span className="text-[#2051FF] underline underline-offset-4">
+                        выберите его
+                      </span>
+                    </p>
+                  </>
+                )}
               </div>
             </div>
+
             <div className="flex flex-col md:flex-row items-stretch md:items-end justify-between pt-6 md:pt-8 border-t border-[#F1F3F5] gap-6">
               <div className="space-y-2 md:space-y-3 w-full md:w-[260px]">
                 <label className="text-sm md:text-[16px] font-medium text-[#64748B] ml-2 flex justify-between">
@@ -219,7 +298,6 @@ export default function GeneratePage() {
                 управления проектом.
               </p>
             </div>
-
             <div className="flex justify-center pt-4 md:pt-6">
               <Button
                 onClick={handleCreateProject}

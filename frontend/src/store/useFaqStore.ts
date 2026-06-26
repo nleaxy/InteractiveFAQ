@@ -56,6 +56,12 @@ interface FaqState {
     count: number,
   ) => Promise<void>;
 
+  generateFaqFromFile: (
+    projectId: number | string,
+    file: File,
+    count: number,
+  ) => Promise<void>;
+
   getProjectById: (id: number | string) => FaqProject | undefined;
   logout: () => void;
 }
@@ -196,6 +202,7 @@ export const useFaqStore = create<FaqState>((set, get) => ({
     }
   },
 
+  // ГЕНЕРАЦИЯ ИЗ ТЕКСТА
   generateFaq: async (projectId, description, count) => {
     try {
       await api.post(
@@ -206,6 +213,27 @@ export const useFaqStore = create<FaqState>((set, get) => ({
       await get().fetchProjectFaqs(projectId);
     } catch (error) {
       console.error("Ошибка генерации:", error);
+      throw error;
+    }
+  },
+
+  // НОВОЕ: ГЕНЕРАЦИЯ ИЗ ФАЙЛА
+  generateFaqFromFile: async (projectId, file, count) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("count", String(count));
+
+      await api.post(`/api/projects/v1/generate/file`, formData, {
+        params: { project_id: projectId },
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      await get().fetchProjectFaqs(projectId);
+    } catch (error) {
+      console.error("Ошибка генерации из файла:", error);
       throw error;
     }
   },
