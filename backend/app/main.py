@@ -3,9 +3,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, projects, search, generate
 from app.ml.search_model import FAQSynonymizer
+from app.database.connection import engine, Base 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    print("Проверка и создание таблиц в базе данных...")
+    Base.metadata.create_all(bind=engine)
+    
     print("Инициализация ML модели поиска...")
     app.state.synonymizer = FAQSynonymizer()
     print("ML модель успешно загружена в память.")
@@ -22,6 +26,8 @@ app = FastAPI(
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost",
+    "http://127.0.0.1"
 ]
 
 app.add_middleware(
