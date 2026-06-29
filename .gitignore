@@ -29,3 +29,5 @@ frontend/yarn-error.log*
 *.swp
 .DS_Store
 Thumbs.db
+
+team9_id_rsa
